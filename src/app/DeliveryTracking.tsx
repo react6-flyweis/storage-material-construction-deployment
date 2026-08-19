@@ -17,7 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDeliveriesApi, markDeliveryReceivedApi, markDeliveryPartialApi } from "../api/projects.api";
 import UpdateSiteContactModal from "../components/common/UpdateSiteContactModal";
 import ScanQRCodeModal from "../components/common/ScanQRCodeModal";
-import ScanResultModal from "../components/common/ScanResultModal";
+import BundleDetailsModal from "../components/common/BundleDetailsModal";
 import DeliveryDetailsModal from "../components/materials/DeliveryDetailsModal";
 import AddDeliveryDrawer from "../components/materials/AddDeliveryDrawer";
 import MarkPartialModal from "../components/materials/MarkPartialModal";
@@ -25,6 +25,7 @@ import MarkPartialModal from "../components/materials/MarkPartialModal";
 export default function DeliveryTracking() {
   const [updateContactOpen, setUpdateContactOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [scannedProjectId, setScannedProjectId] = useState<string | undefined>();
   const [resultOpen, setResultOpen] = useState(false);
   const [scannedBundleId, setScannedBundleId] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -153,6 +154,7 @@ export default function DeliveryTracking() {
       id: item.deliveryNumber || "-",
       title: item.materialType || item.description || "Delivery",
       subtitle: item.project?.projectName || item.project?.jobId || "-",
+      leadId: item.project?.leadId || "",
       badges,
       material: {
         qty: formattedWeight,
@@ -512,7 +514,13 @@ export default function DeliveryTracking() {
                       <CheckSquare className="w-3.5 h-3.5" />
                       {markReceivedMutation.isPending ? "Marking..." : "Mark as Received"}
                     </button>
-                    <button onClick={() => setScanOpen(true)} className="bg-[#F97316] text-white py-3 rounded-xl text-[9px] font-bold uppercase tracking-wider hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => {
+                        setScannedProjectId(item.leadId);
+                        setScanOpen(true);
+                      }}
+                      className="bg-[#F97316] text-white py-3 rounded-xl text-[9px] font-bold uppercase tracking-wider hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2"
+                    >
                       <QrCode className="w-3.5 h-3.5" />
                       Scan QR Code
                     </button>
@@ -564,13 +572,17 @@ export default function DeliveryTracking() {
       />
       <ScanQRCodeModal
         open={scanOpen}
-        onClose={() => setScanOpen(false)}
+        onClose={() => {
+          setScanOpen(false);
+          setScannedProjectId(undefined);
+        }}
+        projectId={scannedProjectId}
         onScanSuccess={(bundleId) => {
           setScannedBundleId(bundleId);
           setResultOpen(true);
         }}
       />
-      <ScanResultModal
+      <BundleDetailsModal
         open={resultOpen}
         onClose={() => setResultOpen(false)}
         bundleId={scannedBundleId}
