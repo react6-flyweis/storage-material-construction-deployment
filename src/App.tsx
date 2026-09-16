@@ -2,6 +2,7 @@ import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./routes/AppRoutes";
 import { Toaster } from "react-hot-toast";
 import { SidebarProvider } from "./context/SidebarContext";
+import { SocketProvider } from "./context/SocketContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Suspense } from "react";
 import LoadingScreen from "./components/LoadingScreen";
@@ -22,17 +23,19 @@ function App() {
     <Suspense fallback={<LoadingScreen />}>
 
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 3000,
-            }}
-          />
-          <SidebarProvider>
-            <AppRoutes />
-          </SidebarProvider>
-        </BrowserRouter>
+        <SocketProvider>
+          <BrowserRouter>
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 3000,
+              }}
+            />
+            <SidebarProvider>
+              <AppRoutes />
+            </SidebarProvider>
+          </BrowserRouter>
+        </SocketProvider>
       </QueryClientProvider>
     </Suspense>
   );

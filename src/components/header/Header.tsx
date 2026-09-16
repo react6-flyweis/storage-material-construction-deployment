@@ -7,6 +7,7 @@ import { useSearch } from "../../context/SearchContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { logoutApi } from "../../api/auth.api";
+import { useUnreadNotificationCountQuery } from "@/modules/notifications/notifications.hooks";
 
 type Props = {
   count?: number;
@@ -18,7 +19,9 @@ type Props = {
 const hideSearchOnRoutes = ["/notifications", "/communication"];
 
 export default function Header({ count, onToggleSidebar, isPanelCollapsed, onPanelToggle }: Props) {
-  const displayCount = typeof count === "number" && count > 99 ? "99+" : count;
+  const { data: unreadNotifications } = useUnreadNotificationCountQuery();
+  const totalCount = typeof count === "number" ? count : (unreadNotifications ?? 0);
+  const displayCount = totalCount > 99 ? "99+" : totalCount;
   const { search, setSearch } = useSearch();
   const location = useLocation();
 
@@ -92,10 +95,14 @@ export default function Header({ count, onToggleSidebar, isPanelCollapsed, onPan
       </div>
 
       <div className="flex lg:gap-12 gap-3 items-center">
-        <div className="relative">
+        <div
+          className="relative cursor-pointer"
+          onClick={() => navigate("/notifications")}
+          title="Notifications"
+        >
           <img src={BellIcon} className="lg:w-8 w-6 min-w-6" alt="" />
-          {typeof count === "number" && count > 0 && (
-            <span className="absolute lg:-top-2 -top-1 lg:left-5 left-4 px-1 lg:min-w-5 lg:h-5 min-w-4 h-4 flex items-center justify-center text-white bg-red-500 rounded-full text-[10px]">
+          {totalCount > 0 && (
+            <span className="absolute lg:-top-2 -top-1 lg:left-5 left-4 px-1 lg:min-w-5 lg:h-5 min-w-4 h-4 flex items-center justify-center text-white bg-red-500 rounded-full text-[10px] font-bold">
               {displayCount}
             </span>
           )}

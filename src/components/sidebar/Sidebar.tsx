@@ -13,6 +13,8 @@ import RightArrowIcon from "../../assets/right-arrow.svg";
 import DeliveryTrackingIcon from "../../assets/delivery-tracking.svg";
 import { useSidebar } from "../../context/SidebarContext";
 import { useAuthStore } from "../../store/authStore";
+import { useChatUnreadCountQuery } from "@/modules/team-chat/team-chat.hooks";
+import { useUnreadNotificationCountQuery } from "@/modules/notifications/notifications.hooks";
 
 type SidebarSubTab = {
   label: string;
@@ -28,7 +30,7 @@ type SidebarTab = {
   subTabs?: SidebarSubTab[];
 };
 
-export const SIDEBAR_TABS: SidebarTab[] = [
+const SIDEBAR_TABS: SidebarTab[] = [
   {
     key: "dashboard",
     icon: DashboardIcon,
@@ -107,6 +109,21 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
   const { user } = useAuthStore();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  const { data: chatUnread } = useChatUnreadCountQuery();
+  const { data: notificationUnread } = useUnreadNotificationCountQuery();
+
+  const getTabBadge = (key: string) => {
+    if (key === "communication") {
+      const c = chatUnread?.total ?? chatUnread?.count ?? 0;
+      return c > 0 ? (c > 99 ? "99+" : c) : null;
+    }
+    if (key === "notifications") {
+      const n = notificationUnread ?? 0;
+      return n > 0 ? (n > 99 ? "99+" : n) : null;
+    }
+    return null;
+  };
+
   const activeTab =
     SIDEBAR_TABS.find((tab) => {
       if (tab.key === "materials") {
@@ -162,6 +179,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
             {SIDEBAR_TABS.map((tab, index) => {
               const isActive = activeTab === tab.key;
               const isHovered = hoveredIndex === index;
+              const badge = getTabBadge(tab.key);
 
               return (
                 <div
@@ -181,12 +199,19 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                       <img src={SidenavigationIcon} alt="" className="absolute right-0" />
                     )}
 
-                    <img
-                      src={tab.icon}
-                      alt={tab.label}
-                      className={`transition-transform hover:scale-105 ${isActive ? "relative z-10" : ""
-                        }`}
-                    />
+                    <div className="relative flex items-center justify-center">
+                      <img
+                        src={tab.icon}
+                        alt={tab.label}
+                        className={`transition-transform hover:scale-105 ${isActive ? "relative z-10" : ""
+                          }`}
+                      />
+                      {badge && (
+                        <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#1D51A4] shadow-sm leading-none z-20 pointer-events-none select-none">
+                          {badge}
+                        </span>
+                      )}
+                    </div>
                   </button>
 
                   {/* Tooltip Popover */}
@@ -237,6 +262,11 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                       >
                         {tab.label}
                       </span>
+                      {badge && (
+                        <span className="ml-1 min-w-[18px] h-[18px] px-1.5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                          {badge}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
