@@ -5,8 +5,8 @@ import { useState } from "react";
 import {
   getBundleDetailsApi,
   verifyBundleApi,
-  markBundleStagedApi,
-  markBundleLoadedApi,
+  // markBundleStagedApi,
+  // markBundleLoadedApi,
   reprintBundleLabelApi,
 } from "../../api/projects.api";
 import ReportMismatchModal from "./ReportMismatchModal";
@@ -44,29 +44,29 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
     },
   });
 
-  const stageMutation = useMutation({
-    mutationFn: () => markBundleStagedApi(bundleId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
-      setSuccessModalTitle("Bundle Marked as Staged!");
-      setSuccessModalOpen(true);
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to mark bundle as staged");
-    },
-  });
+  // const stageMutation = useMutation({
+  //   mutationFn: () => markBundleStagedApi(bundleId),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
+  //     setSuccessModalTitle("Bundle Marked as Staged!");
+  //     setSuccessModalOpen(true);
+  //   },
+  //   onError: (err: any) => {
+  //     toast.error(err?.response?.data?.message || "Failed to mark bundle as staged");
+  //   },
+  // });
 
-  const loadMutation = useMutation({
-    mutationFn: () => markBundleLoadedApi(bundleId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
-      setSuccessModalTitle("Bundle Marked as Loaded!");
-      setSuccessModalOpen(true);
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to mark bundle as loaded");
-    },
-  });
+  // const loadMutation = useMutation({
+  //   mutationFn: () => markBundleLoadedApi(bundleId),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
+  //     setSuccessModalTitle("Bundle Marked as Loaded!");
+  //     setSuccessModalOpen(true);
+  //   },
+  //   onError: (err: any) => {
+  //     toast.error(err?.response?.data?.message || "Failed to mark bundle as loaded");
+  //   },
+  // });
 
   const reprintMutation = useMutation({
     mutationFn: () => reprintBundleLabelApi(bundleId),
@@ -147,7 +147,7 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                 {verifyMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Verify Bundle
               </button>
-              <button
+              {/* <button
                 onClick={() => loadMutation.mutate()}
                 disabled={loadMutation.isPending}
                 className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -162,7 +162,7 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
               >
                 {stageMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Mark Staged
-              </button>
+              </button> */}
             </div>
           </div>
 
@@ -306,15 +306,15 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                 </div>
               </div>
 
-              {/* Items List Table */}
+              {/* Bundle Items Table */}
               <div className="mt-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Items List</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Bundle Items</h3>
                 <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-[#1C1F25] text-white">
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider w-12">#</th>
-                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Description</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Part Code / Description</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Qty</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Length</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Weight</th>
@@ -325,13 +325,24 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                       {bundle.items?.map((item, index) => (
                         <tr key={item._id || index} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-4 py-4 text-sm font-bold text-gray-400">{index + 1}</td>
-                          <td className="px-4 py-4 text-sm font-bold text-gray-700">{item.description || "-"}</td>
-                          <td className="px-4 py-4 text-sm font-semibold text-gray-600">{item.qty}</td>
+                          <td className="px-4 py-4 text-sm font-bold text-gray-700">
+                            {item.partCode ? (
+                              <span>
+                                <span className="text-[#1D51A4] font-bold">{item.partCode}</span>
+                                {item.description ? ` - ${item.description}` : ""}
+                              </span>
+                            ) : (
+                              item.description || "-"
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-sm font-semibold text-gray-600">{item.qty ?? "-"}</td>
                           <td className="px-4 py-4 text-sm font-semibold text-gray-500">
-                            {item.lengthFeet ? `${Number(item.lengthFeet).toFixed(2)} FT` : "-"}
+                            {item.lengthFeet !== undefined && item.lengthFeet !== null ? `${Number(item.lengthFeet).toFixed(2)} FT` : "-"}
                           </td>
                           <td className="px-4 py-4 text-sm font-bold text-gray-700">
-                            {item.totalWeight ? `${Number(item.totalWeight).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} LBS` : "-"}
+                            {item.totalWeight || item.weight
+                              ? `${Number(item.totalWeight || item.weight).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} LBS`
+                              : "-"}
                           </td>
                           <td className="px-4 py-4 text-sm font-medium text-gray-500">
                             {item.markIds?.join(", ") || "-"}
@@ -352,6 +363,7 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
         open={isMismatchModalOpen}
         onClose={() => setIsMismatchModalOpen(false)}
         bundleId={bundleId}
+        bundle={bundle}
         onSuccess={(message) => {
           queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
           setSuccessModalTitle(message);

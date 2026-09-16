@@ -96,6 +96,7 @@ export const markDeliveryPartialApi = (deliveryId: string, payload?: { notes?: s
 
 export interface ScanBundlePayload {
   bundleId: string;
+  project?: string;
 }
 
 export const scanBundleApi = (payload: ScanBundlePayload) => {
@@ -204,7 +205,21 @@ export const markBundleLoadedApi = (bundleId: string) => {
   return axiosInstance.post(`/construction/bundles/${bundleId}/mark-loaded`);
 };
 
-export const reportBundleMismatchApi = (bundleId: string, payload: { notes: string }) => {
+export interface MismatchItemPayload {
+  itemId?: string;
+  partCode?: string;
+  description?: string;
+  qty?: number;
+  receivedQty?: number;
+  status?: string;
+}
+
+export interface ReportBundleMismatchPayload {
+  notes?: string;
+  items?: MismatchItemPayload[];
+}
+
+export const reportBundleMismatchApi = (bundleId: string, payload: ReportBundleMismatchPayload) => {
   return axiosInstance.post(`/construction/bundles/${bundleId}/report-mismatch`, payload);
 };
 

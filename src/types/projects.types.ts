@@ -194,10 +194,17 @@ export interface DeliveryProject {
   location: string;
 }
 
+export interface DeliveryStatusHistoryItem {
+  _id?: string;
+  status: string;
+  changedAt: string;
+}
+
 export interface ConstructionDelivery {
   deliveryId: string;
   deliveryNumber: string;
   status: string;
+  statusHistory?: DeliveryStatusHistoryItem[];
   description: string;
   materialType: string;
   loadWeight: number;
@@ -588,6 +595,23 @@ export interface BundleItem {
   _id: string;
 }
 
+export const MISMATCH_ITEM_STATUSES = {
+  RECEIVED: "Received",
+  PARTIALLY_RECEIVED: "Partially Received",
+  NOT_RECEIVED: "Not Received",
+} as const;
+
+export type MismatchStatus = (typeof MISMATCH_ITEM_STATUSES)[keyof typeof MISMATCH_ITEM_STATUSES];
+
+export interface BundleMismatchItem {
+  itemId: string;
+  partCode: string;
+  description: string;
+  qty: number;
+  receivedQty: number;
+  status: MismatchStatus | string;
+}
+
 export interface BundleDetailInfo {
   bundleId: string;
   bundleNo: string;
@@ -601,6 +625,7 @@ export interface BundleDetailInfo {
   labelPrinted: boolean;
   verified: boolean;
   mismatchNotes: string;
+  mismatchItems?: BundleMismatchItem[];
   project: {
     leadId: string;
     projectName: string;

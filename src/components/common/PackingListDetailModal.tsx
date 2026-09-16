@@ -9,8 +9,15 @@ import {
   markPackingListLoadingApi,
   markPackingListDispatchApi,
 } from "../../api/projects.api";
+import type { PackingListBundleItem } from "../../types/projects.types";
 import Modal from "./Modal";
 import SuccessModal from "./SuccessModal";
+
+interface DisplayBundleItem extends Partial<PackingListBundleItem> {
+  _id?: string;
+  bundleNo: string;
+  status?: string;
+}
 
 interface PackingListDetailModalProps {
   open: boolean;
@@ -118,6 +125,28 @@ export default function PackingListDetailModal({ open, onClose, packingListId }:
   const currentProjectName = detail?.project?.projectName || "-";
   const currentJobId = detail?.project?.jobId || "-";
   const bundles = detail?.bundles || [];
+
+  const allBundleItems: DisplayBundleItem[] = bundles.flatMap((bundle) => {
+    if (!bundle.items || bundle.items.length === 0) {
+      return [{
+        _id: bundle._id,
+        bundleNo: bundle.bundleNo || bundle._id,
+        partCode: "",
+        description: "-",
+        qty: undefined,
+        lengthFeet: null,
+        totalWeight: bundle.totalWeight,
+        weight: bundle.totalWeight,
+        markIds: [] as string[],
+        status: bundle.status
+      }];
+    }
+    return bundle.items.map((item) => ({
+      ...item,
+      bundleNo: bundle.bundleNo || bundle._id,
+      status: bundle.status
+    }));
+  });
 
   // Calculate total items across all bundles
   const totalItemsCount = bundles.reduce((acc, bundle) => {
@@ -346,9 +375,9 @@ export default function PackingListDetailModal({ open, onClose, packingListId }:
             </div>
           </div>
 
-          {/* Bundle List */}
+          {/* Bundle Items */}
           <div className="space-y-4 pt-2">
-            <h2 className="text-xl font-bold text-gray-900">Bundle List</h2>
+            <h2 className="text-xl font-bold text-gray-900">Bundle Items</h2>
             <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
               <div className="overflow-x-auto scroll-hide">
                 <table className="w-full text-left min-w-[700px]">
@@ -360,7 +389,7 @@ export default function PackingListDetailModal({ open, onClose, packingListId }:
                       <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Quantity</th>
                       <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Length</th>
                       <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Weight</th>
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Mark IDs / Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
@@ -382,37 +411,32 @@ export default function PackingListDetailModal({ open, onClose, packingListId }:
                           <p className="text-xs font-bold text-red-500">Failed to load detail data.</p>
                         </td>
                       </tr>
-                    ) : bundles.length === 0 ? (
+                    ) : allBundleItems.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-10 text-center">
-                          <p className="text-xs font-bold text-gray-400">No bundles in this packing list.</p>
+                          <p className="text-xs font-bold text-gray-400">No bundle items in this packing list.</p>
                         </td>
                       </tr>
                     ) : (
-                      bundles.map((bundle, idx) => {
-                        const firstItem = bundle.items?.[0];
-                        const partsText = bundle.items && bundle.items.length > 0
-                          ? bundle.items.map((i) => i.partCode || i.description).filter(Boolean).join(", ")
-                          : "-";
-                        const totalQty = bundle.items && bundle.items.length > 0
-                          ? bundle.items.reduce((sum, item) => sum + (item.qty || 0), 0)
-                          : "-";
-                        const lengthFeet = firstItem?.lengthFeet;
+                      allBundleItems.map((item, idx) => {
+                        const partDesc = item.partCode
+                          ? `${item.partCode}${item.description ? ` - ${item.description}` : ""}`
+                          : item.description || "-";
+                        const weightVal = item.totalWeight ?? item.weight;
+                        const markIdsText = item.markIds && item.markIds.length > 0 ? item.markIds.join(", ") : formatStatus(item.status);
 
                         return (
-                          <tr key={bundle._id || idx} className="hover:bg-gray-50/50 transition-colors">
+                          <tr key={item._id || idx} className="hover:bg-gray-50/50 transition-colors">
                             <td className="px-4 py-4 text-sm font-bold text-gray-400">{idx + 1}</td>
-                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{bundle.bundleNo || bundle._id}</td>
-                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{partsText}</td>
-                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{totalQty}</td>
+                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{item.bundleNo}</td>
+                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{partDesc}</td>
+                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{item.qty ?? "-"}</td>
                             <td className="px-4 py-4 text-sm font-bold text-gray-500">
-                              {lengthFeet !== undefined && lengthFeet !== null ? `${Number(lengthFeet).toFixed(2)} ft` : "-"}
+                              {item.lengthFeet !== undefined && item.lengthFeet !== null ? `${Number(item.lengthFeet).toFixed(2)} ft` : "-"}
                             </td>
-                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{formatWeight(bundle.totalWeight)}</td>
-                            <td className="px-4 py-4 text-sm">
-                              <span className="text-gray-700 font-bold capitalize">
-                                {formatStatus(bundle.status)}
-                              </span>
+                            <td className="px-4 py-4 text-sm font-bold text-gray-900">{formatWeight(weightVal)}</td>
+                            <td className="px-4 py-4 text-sm font-semibold text-gray-700">
+                              {markIdsText}
                             </td>
                           </tr>
                         );
