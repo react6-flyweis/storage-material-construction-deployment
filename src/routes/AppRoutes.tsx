@@ -20,6 +20,7 @@ const Login = lazy(() => import("../components/home/login"));
 const ProfilePage = lazy(() => import("../app/Profile"));
 const SettingPage = lazy(() => import("../app/Settings"));
 const ForgotPassword = lazy(() => import("../components/home/forgotpassword"));
+const ResetPassword = lazy(() => import("../components/home/resetpassword"));
 const DeliveryTracking = lazy(() => import("../app/DeliveryTracking"));
 const LoadStaging = lazy(() => import("../app/LoadStaging"));
 const BundleScan = lazy(() => import("../app/BundleScan"));
@@ -39,6 +40,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Route>
 
           <Route element={<ProtectedRoute />}>
