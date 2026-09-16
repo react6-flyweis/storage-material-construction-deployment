@@ -63,10 +63,16 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
+      const currentPath = window.location.pathname + window.location.search;
+      const redirectUrl =
+        currentPath && currentPath !== "/login" && currentPath !== "/"
+          ? `/login?redirect=${encodeURIComponent(currentPath)}`
+          : "/login";
+
       const refreshToken = useAuthStore.getState().refreshToken;
       if (!refreshToken) {
         useAuthStore.getState().logout();
-        window.location.href = "/login";
+        window.location.href = redirectUrl;
         return Promise.reject(error);
       }
 
@@ -86,7 +92,7 @@ axiosInstance.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         useAuthStore.getState().logout();
-        window.location.href = "/login";
+        window.location.href = redirectUrl;
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
