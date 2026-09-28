@@ -7,6 +7,7 @@ interface ProjectSelectorProps {
   onChange: (val: string) => void;
   showAllOption?: boolean;
   width?: string;
+  hasDelivery?: boolean;
 }
 
 export default function ProjectSelector({
@@ -14,10 +15,11 @@ export default function ProjectSelector({
   onChange,
   showAllOption = false,
   width = "100%",
+  hasDelivery,
 }: ProjectSelectorProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ["projects-selector-list"],
-    queryFn: () => getProjectsApi({ page: 1, limit: 100 }),
+    queryKey: ["projects-selector-list", hasDelivery],
+    queryFn: () => getProjectsApi({ page: 1, limit: 100, hasDelivery }),
   });
 
   const projects = data?.data?.data?.projects || [];
