@@ -1,9 +1,13 @@
 import { axiosInstance } from "./axiosInstance";
-import type { ProjectsApiResponse, ProjectDetailsApiResponse, CalendarApiResponse, DrawingsApiResponse, TasksApiResponse, DeliveriesApiResponse, DeliveryDetailsApiResponse, LabelsApiResponse, LabelsQueryParams, BundleScanApiResponse, BundleScanQueryParams, PackingListApiResponse, PackingListsQueryParams, PackingListDetailApiResponse, DispatchVerificationApiResponse, DispatchVerificationDetailApiResponse, DispatchVerificationQueryParams, MaterialRequestsApiResponse, MaterialRequestsQueryParams, MaterialRequest, BundleDetailsApiResponse, DashboardApiResponse } from "../types/projects.types";
+import type { ProjectsApiResponse, ProjectDetailsApiResponse, CalendarApiResponse, DrawingsApiResponse, TasksApiResponse, DeliveriesApiResponse, DeliveryDetailsApiResponse, LabelsApiResponse, LabelsQueryParams, BundleScanApiResponse, BundleScanQueryParams, PackingListApiResponse, PackingListsQueryParams, PackingListDetailApiResponse, DispatchVerificationApiResponse, DispatchVerificationDetailApiResponse, DispatchVerificationQueryParams, MaterialRequestsApiResponse, MaterialRequestsQueryParams, MaterialRequestsFiltersApiResponse, MaterialRequest, BundleDetailsApiResponse, DashboardApiResponse, DashboardFiltersApiResponse, DashboardQueryParams } from "../types/projects.types";
 
 export interface ProjectsQueryParams {
   page?: number;
   limit?: number;
+  status?: string;
+  priority?: string;
+  search?: string;
+  hasDelivery?: boolean | number | string;
 }
 
 export interface CalendarQueryParams {
@@ -36,8 +40,12 @@ export const getDeliveriesApi = () => {
   return axiosInstance.get<DeliveriesApiResponse>("/construction/deliveries");
 };
 
-export const getDashboardApi = () => {
-  return axiosInstance.get<DashboardApiResponse>("/construction/dashboard");
+export const getDashboardFiltersApi = () => {
+  return axiosInstance.get<DashboardFiltersApiResponse>("/construction/dashboard/filters");
+};
+
+export const getDashboardApi = (params?: DashboardQueryParams) => {
+  return axiosInstance.get<DashboardApiResponse>("/construction/dashboard", { params });
 };
 
 export const getDeliveryDetailsApi = (deliveryId: string) => {
@@ -167,6 +175,39 @@ export const getMaterialRequestsApi = (params?: MaterialRequestsQueryParams) => 
   return axiosInstance.get<MaterialRequestsApiResponse>("/construction/material-requests", { params });
 };
 
+export const getMaterialRequestsFiltersApi = () => {
+  return axiosInstance.get<MaterialRequestsFiltersApiResponse>("/construction/material-requests/filters");
+};
+
+export interface ExportMaterialRequestsParams {
+  leadId?: string;
+  projectId?: string;
+  department?: string;
+  status?: string;
+  requestedBy?: string;
+  priority?: string;
+  siteLocation?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  fromDate?: string;
+  toDate?: string;
+  format?: "excel" | "csv";
+}
+
+export const exportMaterialRequestsApi = (params?: ExportMaterialRequestsParams, format: "excel" | "csv" = "excel") => {
+  const url = format === "csv"
+    ? "/construction/material-requests/export/csv"
+    : "/construction/material-requests/export";
+  return axiosInstance.get(url, {
+    params: {
+      ...params,
+      ...(format === "csv" ? { format: "csv" } : {}),
+    },
+    responseType: "blob",
+  });
+};
+
 export const getMaterialRequestDetailsApi = (id: string) => {
   return axiosInstance.get<{ success: boolean; message: string; data: { materialRequest: MaterialRequest } }>(`/construction/material-requests/${id}`);
 };
@@ -241,11 +282,40 @@ export const updateSiteContactApi = (deliveryId: string, payload: UpdateSiteCont
   return axiosInstance.put(`/construction/deliveries/${deliveryId}/site-contact`, payload);
 };
 
+export const getConsolidatedBOMApi = (projectId: string) => {
+  return axiosInstance.get(`/plant/projects/${projectId}/consolidated-bom`);
+};
 
+export const getConsolidatedBOMUrlApi = (projectId: string) => {
+  return axiosInstance.get(`/plant/bom/projects/${projectId}/consolidated-url`);
+};
 
+export const getProjectDrawingsApi = (projectId: string) => {
+  return axiosInstance.get(`/plant/projects/${projectId}/drawings`);
+};
 
+export const getProjectBuildingsApi = (projectId: string) => {
+  return axiosInstance.get(`/plant/projects/${projectId}/buildings`);
+};
 
+export const uploadProjectDrawingsApi = (leadId: string, drawings: Array<{ buildingId: string; fileUrl: string; fileName: string }>) => {
+  return axiosInstance.post(`/plant/projects/${leadId}/drawings`, { drawings });
+};
 
+export const getProjectDeliveryApi = (projectId: string) => {
+  return axiosInstance.get(`/plant/deliveries/project/${projectId}`);
+};
 
+export const updateDeliveryStatusApi = (deliveryId: string, status: string) => {
+  return axiosInstance.put(`/plant/deliveries/${deliveryId}/status`, { status });
+};
 
-
+export const rescheduleDeliveryApi = (deliveryId: string, payload: {
+  date: string;
+  timeWindowStart?: string;
+  timeWindowEnd?: string;
+  rescheduleReason?: string;
+  additionalNotes?: string;
+}) => {
+  return axiosInstance.put(`/plant/deliveries/${deliveryId}/reschedule`, payload);
+};
