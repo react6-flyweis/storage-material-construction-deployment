@@ -1,460 +1,287 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import BackArrow from "../assets/backarrowicon.svg";
-import EyeIcon from "../assets/EyeIcon.svg";
-import EditIcon from "../assets/EditIcon.svg";
-import CustomSelect from "../components/common/CustomSelect";
-import DownloadIcon from "../assets/downloadicon.svg";
-import PdfIcon from "../assets/pdficon.svg";
-import { useSearch } from "../context/SearchContext";
-
-const projectFilterOptions = [
-  { label: "Downtown Office Complex", value: "PRJ-001" },
-  { label: "Residential Tower A", value: "PRJ-002" },
-  { label: "Shopping Mall Renovation", value: "PRJ-003" },
-  { label: "Industrial Warehouse", value: "PRJ-004" },
-];
-
-const PROJECT_DATA: any = {
-  "PRJ-001": {
-    projectName: "Downtown Office Complex",
-    manager: "John Smith",
-    managerCode: "MR-001",
-    initials: "JS",
-    start: "2024-01-15",
-    end: "2024-08-30",
-    duration: "7.5",
-    scope:
-      "Construction of a 15-story office complex with underground parking, modern HVAC systems, and sustainable energy solutions.",
-    deliverables: [
-      { id: 1, text: "Foundation and structural framework" },
-      { id: 2, text: "HVAC and electrical systems installation" },
-      { id: 3, text: "Interior finishing and fixtures" },
-      { id: 4, text: "Parking garage construction" },
-      { id: 5, text: "Landscaping and exterior work" },
-    ],
-    phases: [
-      {
-        title: "Foundation",
-        date: "2024-01-15 - 2024-03-15",
-        status: "Completed",
-      },
-      {
-        title: "Structure",
-        date: "2024-03-16 - 2024-05-30",
-        status: "Inprogress",
-      },
-      { title: "Systems", date: "2024-06-01 - 2024-07-15", status: "Upcoming" },
-      {
-        title: "Finishing",
-        date: "2024-07-16 - 2024-08-30",
-        status: "Upcoming",
-      },
-    ],
-    files: [
-      { name: "Architectural Plans.pdf", size: "15.2 MB" },
-      { name: "Structural Drawings.dwg", size: "15.2 MB" },
-      { name: "Specifications.docx", size: "15.2 MB" },
-    ],
-  },
-
-  "PRJ-002": {
-    projectName: "Residential Tower A",
-    manager: "Sarah Wilson",
-    managerCode: "MR-002",
-    initials: "SW",
-    start: "2024-02-01",
-    end: "2024-09-15",
-    duration: "7.5",
-    scope: "High-rise residential tower construction.",
-    deliverables: [
-      { id: 1, text: "Tower core structure" },
-      { id: 2, text: "Residential unit finishing" },
-    ],
-    phases: [
-      {
-        title: "Structure",
-        date: "2024-02-01 - 2024-06-30",
-        status: "Completed",
-      },
-      {
-        title: "Finishing",
-        date: "2024-07-01 - 2024-09-15",
-        status: "Upcoming",
-      },
-    ],
-    files: [
-      { name: "Tower Plan.pdf", size: "10.5 MB" },
-      { name: "Interior Layout.pdf", size: "8.9 MB" },
-    ],
-  },
-
-  "PRJ-003": {
-    projectName: "Shopping Mall Renovation",
-    manager: "David Lee",
-    managerCode: "MR-003",
-    initials: "DL",
-    start: "2023-11-10",
-    end: "2024-04-20",
-    duration: "5.5",
-    scope:
-      "Renovation of an existing shopping mall including interior redesign, electrical upgrades, and facade improvement.",
-    deliverables: [
-      { id: 1, text: "Interior redesign" },
-      { id: 2, text: "Electrical and lighting upgrade" },
-      { id: 3, text: "Facade renovation" },
-    ],
-    phases: [
-      {
-        title: "Planning",
-        date: "2023-11-10 - 2023-12-15",
-        status: "Completed",
-      },
-      {
-        title: "Renovation",
-        date: "2023-12-16 - 2024-03-15",
-        status: "Completed",
-      },
-      {
-        title: "Final Touches",
-        date: "2024-03-16 - 2024-04-20",
-        status: "Inprogress",
-      },
-    ],
-    files: [
-      { name: "Renovation Layout.pdf", size: "9.4 MB" },
-      { name: "Electrical Plan.dwg", size: "11.1 MB" },
-    ],
-  },
-
-  "PRJ-004": {
-    projectName: "Industrial Warehouse",
-    manager: "Andrew Scott",
-    managerCode: "MR-004",
-    initials: "AS",
-    start: "2024-03-05",
-    end: "2024-12-10",
-    duration: "9",
-    scope:
-      "Construction of a large-scale industrial warehouse with logistics facilities and safety-compliant infrastructure.",
-    deliverables: [
-      { id: 1, text: "Warehouse structural build" },
-      { id: 2, text: "Logistics bay setup" },
-      { id: 3, text: "Fire safety & compliance systems" },
-    ],
-    phases: [
-      {
-        title: "Foundation",
-        date: "2024-03-05 - 2024-04-30",
-        status: "Completed",
-      },
-      {
-        title: "Structure",
-        date: "2024-05-01 - 2024-08-15",
-        status: "Inprogress",
-      },
-      { title: "Systems", date: "2024-08-16 - 2024-10-30", status: "Upcoming" },
-      {
-        title: "Handover",
-        date: "2024-11-01 - 2024-12-10",
-        status: "Upcoming",
-      },
-    ],
-    files: [
-      { name: "Warehouse Layout.pdf", size: "13.7 MB" },
-      { name: "Safety Compliance.docx", size: "6.2 MB" },
-    ],
-  },
-};
-
-const statusStyle: Record<string, string> = {
-  Completed: "bg-[#DCFCE7] text-[#16A34A]",
-  Inprogress: "bg-[#DCFCE7] text-[#16A34A]",
-  Upcoming: "bg-[#F3F3F3] text-[#404040]",
-};
+import React from "react";
+import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getProjectDetailsApi } from "@/api/projects.api";
+import {
+  ProjectDetailsHeader,
+  ProjectDetailsNavButtons,
+  ProjectSummaryCard,
+  UpcomingMaterialDeliveryTable,
+  ProjectTasksCard,
+  type ProjectSummary,
+  type MaterialDelivery,
+  type ProjectTaskItem,
+} from "@/components/projects/details";
+import { AlertCircle, RefreshCw, ArrowLeft } from "lucide-react";
 
 export default function ProjectViewPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { search } = useSearch();
-  const q = search.trim().toLowerCase();
+  const [searchParams] = useSearchParams();
+  const routeParams = useParams<{ id?: string }>();
 
-  const [status, setStatus] = useState("all");
-  const [projectName, setProjectName] = useState("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  console.log(projectName)
-  useEffect(() => {
-    if (location.state?.projectCode) {
-      setStatus(location.state.projectCode);
-      setProjectName(location.state.projectName);
-    }
-  }, [location.state]);
+  // Extract project ID from query params, route params, or navigation state
+  const projectId =
+    searchParams.get("id") ||
+    routeParams.id ||
+    location.state?.projectId ||
+    "";
 
-  const [activeProject, setActiveProject] = useState<any>(null);
-  const filteredDeliverables = activeProject?.deliverables?.filter(
-    (d: any) => !q || d.text.toLowerCase().includes(q)
-  );
-  const filteredFiles = activeProject?.files?.filter(
-    (f: any) => !q || f.name.toLowerCase().includes(q)
-  );
-  const filteredPhases = activeProject?.phases?.filter(
-    (p: any) =>
-      !q ||
-      p.title.toLowerCase().includes(q) ||
-      p.status.toLowerCase().includes(q)
-  );
+  // Query real project details from the API
+  const {
+    data: apiResponse,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["project-details", projectId],
+    queryFn: () => getProjectDetailsApi(projectId),
+    enabled: Boolean(projectId),
+    retry: 1,
+  });
 
+  const apiData = apiResponse?.data?.data;
+  const project = apiData?.project;
 
-  useEffect(() => {
-    if (status !== "all") {
-      setActiveProject(PROJECT_DATA[status]);
-    } else {
-      setActiveProject(null);
-    }
-  }, [status]);
+  // Map API response to clean component structures
+  const summary: ProjectSummary | null = React.useMemo(() => {
+    if (!project) return null;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeProject) return;
-
-    if (file.type !== "application/pdf") {
-      alert("Only PDF files are allowed");
-      e.target.value = "";
-      return;
+    let createdOn = "-";
+    if (project.plannedStartDate) {
+      const d = new Date(project.plannedStartDate);
+      if (!isNaN(d.getTime())) {
+        createdOn = d.toISOString().split("T")[0];
+      }
     }
 
-    const newFile = {
-      name: file.name,
-      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+    const customerName = project.customerId
+      ? `${project.customerId.firstName || ""} ${project.customerId.lastName || ""}`.trim()
+      : undefined;
+
+    return {
+      id: project._id,
+      projectName: project.projectName || project.jobId || "Project",
+      projectCode: project.jobId || "-",
+      status: project.lifecycleStatus || "in_progress",
+      buildingType: project.buildingType || "-",
+      numberOfBuildings: project.numberOfBuildings ?? "-",
+      createdOn,
+      location: project.location || "-",
+      priority: project.priority,
+      description: project.description,
+      customerName,
+      customerEmail: project.customerId?.email,
     };
+  }, [project]);
 
-    setActiveProject((prev: any) => ({
-      ...prev,
-      files: [...(prev.files || []), newFile],
-    }));
+  const deliveries: MaterialDelivery[] = React.useMemo(() => {
+    const rawDeliveries = apiData?.deliveries || [];
+    return rawDeliveries.map((del) => {
+      let dateStr = "-";
+      let timeStr = "";
 
-    e.target.value = "";
+      if (del.deliveryDate) {
+        const d = new Date(del.deliveryDate);
+        if (!isNaN(d.getTime())) {
+          dateStr = d.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+          const hours = d.getUTCHours();
+          const minutes = d.getUTCMinutes();
+          if (hours !== 0 || minutes !== 0) {
+            timeStr = d.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            });
+          }
+        }
+      }
+
+      return {
+        id: del._id,
+        deliveryNumber: del.deliveryNumber || del._id,
+        status: del.status || "scheduled",
+        date: dateStr,
+        time: timeStr,
+        item: del.description || del.materialType || "-",
+        materialType: del.materialType,
+        loadWeight: del.loadWeight,
+        vendor: del.vendor || "-",
+        carrier: del.carrier || "-",
+        pocName: del.pocName || summary?.customerName || "-",
+        pocPhone: del.pocPhone,
+        pocEmail: del.pocEmail || summary?.customerEmail,
+      };
+    });
+  }, [apiData?.deliveries, summary]);
+
+  const tasks: ProjectTaskItem[] = React.useMemo(() => {
+    const rawTasks = apiData?.tasks || [];
+    return rawTasks.map((t) => {
+      let assignedStr: string | null = null;
+      if (typeof t.assignedTo === "string") {
+        assignedStr = t.assignedTo;
+      } else if (t.assignedTo && typeof t.assignedTo === "object") {
+        const userObj = t.assignedTo as { name?: string; email?: string };
+        assignedStr = userObj.name || userObj.email || null;
+      }
+
+      return {
+        id: t._id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        dueDate: t.dueDate,
+        assignedTo: assignedStr,
+      };
+    });
+  }, [apiData?.tasks]);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/projects?tab=project");
+    }
   };
 
+  const handleDeliverySelect = (delivery: MaterialDelivery) => {
+    navigate(`/delivery-details/${delivery.id}`);
+  };
+
+  // State 1: No Project ID provided
+  if (!projectId) {
+    return (
+      <div className="max-w-4xl mx-auto py-16 px-4 text-center">
+        <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-7 h-7" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">No Project Selected</h2>
+        <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+          Please select a project from the project list to view its complete details.
+        </p>
+        <button
+          onClick={() => navigate("/projects?tab=project")}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Go to Project List</span>
+        </button>
+      </div>
+    );
+  }
+
+  // State 2: Loading Skeleton
+  if (isLoading) {
+    return (
+      <div className="space-y-6 pb-12 max-w-7xl mx-auto animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-9 bg-gray-200 rounded-lg" />
+          <div className="w-64 h-8 bg-gray-200 rounded-md" />
+        </div>
+
+        {/* Buttons Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="h-11 bg-gray-200 rounded-lg" />
+          ))}
+        </div>
+
+        {/* Summary Card Skeleton */}
+        <div className="p-6 bg-white border border-gray-100 rounded-xl space-y-5">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-gray-200 rounded-xl" />
+            <div className="space-y-2">
+              <div className="w-48 h-5 bg-gray-200 rounded" />
+              <div className="w-24 h-4 bg-gray-100 rounded" />
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="space-y-1.5">
+                <div className="w-20 h-3 bg-gray-200 rounded" />
+                <div className="w-28 h-4 bg-gray-100 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Table Skeleton */}
+        <div className="bg-white border border-gray-100 rounded-xl p-6 space-y-4">
+          <div className="w-44 h-5 bg-gray-200 rounded" />
+          <div className="h-40 bg-gray-50 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  // State 3: Error State
+  if (isError || !summary) {
+    return (
+      <div className="max-w-4xl mx-auto py-16 px-4 text-center">
+        <div className="w-14 h-14 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-7 h-7" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Project</h2>
+        <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+          {error instanceof Error
+            ? error.message
+            : "The requested project details could not be retrieved from the server."}
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry</span>
+          </button>
+          <button
+            onClick={() => navigate("/projects?tab=project")}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Projects</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // State 4: Render Project Details with Real API Data
   return (
-    <div className="space-y-6">
-      <div className="flex lg:flex-row flex-col lg:items-center justify-between gap-2 mb-8">
-        <div className="flex sm:flex-row flex-col sm:items-center justify-start gap-5">
-          <button
-            onClick={() => navigate("/projects")}
-            className="flex items-center gap-2 bg-[#3F63E1] text-white px-3 w-fit h-[36px] rounded-[8px] text-[14px] font-medium hover:opacity-90"
-          >
-            <img src={BackArrow} alt="" />
-            <span>Back</span>
-          </button>
+    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+      {/* 1. Header with Back button and Dynamic Title */}
+      <ProjectDetailsHeader
+        title={`Project Details- ${summary.projectName}`}
+        onBack={handleBack}
+      />
 
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Statement of Work (SOW)
-          </h1>
-        </div>
+      {/* 2. Action / Navigation Buttons */}
+      <ProjectDetailsNavButtons
+        onViewBOM={() => navigate(`/projects/${projectId}/view-bom`)}
+        onViewDrawings={() => navigate(`/projects/${projectId}/view-drawings`)}
+        onMaterialDelivery={() => navigate(`/projects/${projectId}/material-delivery`)}
+        onBundleScan={() => navigate("/delivery-tracking/bundle-scan")}
+      />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <CustomSelect
-            title="All Projects"
-            options={projectFilterOptions}
-            value={status}
-            onChange={(v) => {
-              setStatus(v);
-              setProjectName(
-                projectFilterOptions.find((p) => p.value === v)?.label || ""
-              );
-            }}
-            width="250px"
-            searchable
-          />
+      {/* 3. Project Summary Card */}
+      <ProjectSummaryCard summary={summary} />
 
-          <button className="flex items-center gap-2 bg-[#3F63E1] text-white px-5 rounded-lg h-[36px] min-w-fit text-sm font-medium hover:opacity-90">
-            Edit SOW
-          </button>
-        </div>
-      </div>
+      {/* 4. Upcoming Material Delivery Table */}
+      <UpcomingMaterialDeliveryTable
+        deliveries={deliveries}
+        onSelectDelivery={handleDeliverySelect}
+      />
 
-      <div className="rounded-[8px] lg:p-6 p-3 border bg-white shadow">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <p className="text-sm uppercase text-[#6B7280] mb-3">
-              Project Details
-            </p>
-
-            <p className="text-sm mb-3">
-              <span className="font-medium">ID:</span>{" "}
-              {status !== "all" ? status : "-"}
-            </p>
-
-            <p className="text-sm mb-4">
-              <span className="font-medium">Project:</span>{" "}
-              {activeProject?.projectName || "-"}
-            </p>
-
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">Status:</span>
-              <span className="px-4 py-1 rounded-full text-sm bg-green-100 text-green-700">
-                Approved
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm uppercase text-[#6B7280] mb-3">
-              Assigned Manager
-            </p>
-
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-[#1D51A4] flex items-center justify-center text-white text-lg font-medium">
-                {activeProject?.initials || "--"}
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-[#111827]">
-                  {activeProject?.manager || "-"}
-                </p>
-                <p className="text-sm text-[#6B7280] mt-1">
-                  {activeProject?.managerCode || "-"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm uppercase text-[#6B7280] mb-3">Timeline</p>
-
-            <p className="text-sm mb-3">
-              <span className="font-bold">Start:</span>{" "}
-              {activeProject?.start || "-"}
-            </p>
-
-            <p className="text-sm mb-3">
-              <span className="font-bold">End:</span>{" "}
-              {activeProject?.end || "-"}
-            </p>
-
-            <p className="text-sm text-[#6B7280]">
-              Duration: {activeProject?.duration || "-"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <p className="text-sm text-[#111827]">Job Scope</p>
-          <p className="text-sm text-[#6B7280] mt-1">
-            {activeProject?.scope || "-"}
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-[8px] lg:p-6 p-3 border bg-white shadow">
-        <h3 className="text-lg font-semibold mb-6">Key Deliverables</h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredDeliverables?.map((item: any) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-4 bg-[#F9FAFB] rounded-[8px] px-5 py-4"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#1D51A4] flex items-center justify-center text-white">
-                {item.id}
-              </div>
-              <p className="text-sm text-[#111827]">{item.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-[8px] lg:p-6 p-3 border bg-white shadow">
-        <h3 className="text-lg font-semibold mb-6">
-          Project Phases & Timeline
-        </h3>
-
-        <div className="space-y-5">
-          {filteredPhases?.map((phase: any, idx: number) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between rounded-[8px] shadow px-5 py-4"
-            >
-              <div>
-                <p className="text-sm font-bold">{phase.title}</p>
-                <p className="text-sm text-[#6B7280] mt-1">{phase.date}</p>
-              </div>
-              <div className="flex items-end flex-col gap-3">
-                <div
-                  className={`px-4 py-1 rounded-full text-sm ${statusStyle[phase.status]
-                    }`}
-                >
-                  {phase.status}
-                </div>
-                <div className="flex gap-4">
-                  {" "}
-                  <button className="hover:opacity-70">
-                    {" "}
-                    <img src={EyeIcon} alt="" />{" "}
-                  </button>{" "}
-                  <button className="hover:opacity-70">
-                    {" "}
-                    <img src={EditIcon} alt="" />{" "}
-                  </button>{" "}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-[8px] lg:p-6 p-3 border bg-white shadow">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Attachments & Documents</h3>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="bg-[#3F63E1] text-white px-6 py-3 rounded-lg text-sm font-medium hover:opacity-90"
-          >
-            Upload File
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 sm:grid-cols-2 gap-3">
-          {filteredFiles?.slice().reverse().map((file: any, idx: number) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between rounded-xl border px-5 py-4"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center">
-                  <img src={PdfIcon} alt="" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-[#111827]">
-                    {file.name}
-                  </p>
-                  <p className="text-sm text-[#6B7280] mt-1">{file.size}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <button className="hover:opacity-70">
-                  <img src={DownloadIcon} alt="" />
-                </button>
-                <button className="hover:opacity-70">
-                  <img src={EyeIcon} alt="" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 5. Project Tasks Card (Real API data) */}
+      <ProjectTasksCard tasks={tasks} />
     </div>
   );
 }
