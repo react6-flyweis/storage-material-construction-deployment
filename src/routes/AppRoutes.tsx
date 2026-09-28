@@ -16,6 +16,9 @@ const Notifications = lazy(() => import("../app/Notifications"));
 const MaterialsViewPage = lazy(() => import("../app/MaterialsViewPage"));
 const ProjectViewPage = lazy(() => import("../app/ProjectViewPage"));
 const DrawingAttachment = lazy(() => import("../app/DrawingAttachment"));
+const BOMFilesDetailsPage = lazy(() => import("../app/BOMFilesDetailsPage"));
+const ProjectDrawingsPage = lazy(() => import("../app/ProjectDrawingsPage"));
+const DeliveryDetailsPage = lazy(() => import("../app/DeliveryDetailsPage"));
 const Login = lazy(() => import("../components/home/login"));
 const ProfilePage = lazy(() => import("../app/Profile"));
 const SettingPage = lazy(() => import("../app/Settings"));
@@ -55,7 +58,17 @@ const AppRoutes = () => {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/:id" element={<ProjectViewPage />} />
+              <Route path="/projects/:id/view-bom" element={<BOMFilesDetailsPage />} />
+              <Route path="/projects/:id/bom" element={<BOMFilesDetailsPage />} />
+              <Route path="/bom-details/:id" element={<BOMFilesDetailsPage />} />
+              <Route path="/projects/:id/view-drawings" element={<ProjectDrawingsPage />} />
+              <Route path="/projects/:id/drawings" element={<ProjectDrawingsPage />} />
+              <Route path="/projects/:id/material-delivery" element={<DeliveryDetailsPage />} />
+              <Route path="/delivery-details/:id" element={<DeliveryDetailsPage />} />
+              <Route path="/projects/:id/delivery-details/:deliveryId" element={<DeliveryDetailsPage />} />
               <Route path="/project-view-page" element={<ProjectViewPage />} />
+              <Route path="/project-details" element={<ProjectViewPage />} />
               <Route path="/drawing-attachment" element={<DrawingAttachment />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/materials" element={<Materials />} />

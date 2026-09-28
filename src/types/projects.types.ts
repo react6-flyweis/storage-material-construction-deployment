@@ -13,8 +13,10 @@ export interface Project {
   lifecycleStatus: string;
   jobId: string;
   projectName: string;
+  priority?: string;
   endDate: string | null;
   plannedStartDate?: string | null;
+  createdAt?: string;
   leadId?: string;
 }
 
@@ -23,6 +25,8 @@ export interface ProjectsResponseData {
   total: number;
   page: number;
   limit: number;
+  scope?: string;
+  stages?: string[];
 }
 
 export interface ProjectsApiResponse {
@@ -37,19 +41,30 @@ export interface Delivery {
   status: string;
   description: string;
   deliveryDate: string;
+  materialType?: string;
+  loadWeight?: number;
+  vendor?: string;
+  carrier?: string;
+  pocName?: string;
+  pocPhone?: string;
+  pocEmail?: string;
 }
 
 export interface Task {
   _id: string;
   title: string;
-  assignedTo: string;
+  assignedTo: string | { name?: string; email?: string } | null;
   priority: string;
   status: string;
   dueDate: string;
 }
 
 export interface ProjectDetails {
-  project: Project & { numberOfBuildings?: number };
+  project: Project & {
+    numberOfBuildings?: number;
+    priority?: string;
+    description?: string;
+  };
   deliveries: Delivery[];
   tasks: Task[];
 }
@@ -523,10 +538,12 @@ export interface MaterialRequestUser {
 }
 
 export interface RequestedItem {
+  _id?: string;
   name: string;
   quantity: number;
   unit: string;
   notes?: string;
+  deliveryStatus?: string;
 }
 
 export interface MaterialRequest {
@@ -564,13 +581,42 @@ export interface MaterialRequestsApiResponse {
   data: MaterialRequestsResponseData;
 }
 
+export interface MaterialRequestFilterProject {
+  leadId: string;
+  projectName: string;
+  jobId: string;
+}
+
+export interface MaterialRequestsFiltersData {
+  statuses: string[];
+  priorities: string[];
+  departments: string[];
+  siteLocations: string[];
+  projects: MaterialRequestFilterProject[];
+}
+
+export interface MaterialRequestsFiltersApiResponse {
+  success: boolean;
+  message: string;
+  data: MaterialRequestsFiltersData;
+}
+
 export interface MaterialRequestsQueryParams {
   page?: number;
   limit?: number;
-  project?: string;
+  leadId?: string;
+  projectId?: string;
   department?: string;
   status?: string;
   requestedBy?: string;
+  priority?: string;
+  siteLocation?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  fromDate?: string;
+  toDate?: string;
+  project?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -647,21 +693,92 @@ export interface BundleDetailsApiResponse {
   };
 }
 
+export interface DashboardFilterProject {
+  _id: string;
+  projectName: string;
+  jobId: string;
+  lifecycleStatus: string;
+  location: string;
+}
+
+export interface DashboardFilterBuilding {
+  _id: string;
+  leadId: string;
+  buildingNumber: number;
+  name: string;
+  status: string;
+}
+
+export interface DashboardFiltersData {
+  projects: DashboardFilterProject[];
+  buildings: DashboardFilterBuilding[];
+  statuses: string[];
+}
+
+export interface DashboardFiltersApiResponse {
+  success: boolean;
+  message: string;
+  data: DashboardFiltersData;
+}
+
+export interface DashboardQueryParams {
+  projectId?: string;
+  leadId?: string;
+  buildingId?: string;
+  status?: string;
+  lifecycleStatus?: string;
+  fromDate?: string;
+  dateFrom?: string;
+  toDate?: string;
+  dateTo?: string;
+}
+
+export interface DashboardFiltersApplied {
+  projectId: string | null;
+  buildingId: string | null;
+  status: string | null;
+  fromDate: string | null;
+  toDate: string | null;
+}
+
 export interface DashboardProjectStats {
   total: number;
   onTrack: number;
   delayed: number;
   completed: number;
+  onTrackPct?: number;
+  delayedPct?: number;
+  completedPct?: number;
   completionRate: number;
   upcomingDeadlines: number;
+  totalChangePctVsYesterday?: number;
+  completionRateLabel?: string;
 }
 
 export interface DashboardDeliveryOverview {
+  scope?: string;
+  fromDate?: string;
+  toDate?: string;
   delivered: number;
   inTransit: number;
   outForDelivery: number;
   delayed: number;
   total: number;
+  deliveredPct?: number;
+  inTransitPct?: number;
+  outForDeliveryPct?: number;
+  delayedPct?: number;
+}
+
+export interface DashboardMaterialRequestOverview {
+  pendingApproval: number;
+  approved: number;
+  rejected: number;
+  urgent: number;
+  total: number;
+  approvedPct?: number;
+  pendingApprovalPct?: number;
+  rejectedPct?: number;
 }
 
 export interface DashboardTaskOverview {
@@ -672,13 +789,66 @@ export interface DashboardTaskOverview {
   overdue: number;
 }
 
+export interface DashboardActiveSite {
+  leadId: string;
+  projectName: string;
+  jobId: string;
+  site: string;
+  buildingType: string;
+  numberOfBuildings: number;
+  progressPct: number;
+  deadline: string | null;
+  deliveryStatus: string;
+  lifecycleStatus: string;
+}
+
 export interface DashboardUpcomingDeadline {
   leadId: string;
   projectName: string;
   jobId: string;
-  location: string;
+  location?: string;
+  site?: string;
   endDate: string;
   daysLeft: number;
+}
+
+export interface DashboardTimelineItem {
+  key: string;
+  label: string;
+  date: string | null;
+  status: string;
+}
+
+export interface DashboardFreightCarrierRow {
+  carrierId: string;
+  carrierName: string;
+  loadsToday: number;
+  onTime: number;
+  delayed: number;
+  priority: string;
+}
+
+export interface DashboardFreightCarriersTotals {
+  totalLoadsToday: number;
+  onTime: number;
+  onTimePct: number;
+  delayed: number;
+  delayedPct: number;
+}
+
+export interface DashboardFreightCarriers {
+  rows: DashboardFreightCarrierRow[];
+  totals: DashboardFreightCarriersTotals;
+}
+
+export interface DashboardRecentActivityItem {
+  type: string; // 'shipper_file' | 'audit' | 'production'
+  action: string;
+  message: string;
+  occurredAt: string;
+  leadId: string | null;
+  actorName: string | null;
+  refId: string;
 }
 
 export interface DashboardRecentDeliveryProject {
@@ -690,17 +860,24 @@ export interface DashboardRecentDeliveryProject {
 
 export interface DashboardRecentDelivery {
   deliveryId: string;
+  deliveryNumber?: string;
   status: string;
   deliveryDate: string;
   project: DashboardRecentDeliveryProject;
 }
 
 export interface DashboardResponseData {
+  filtersApplied?: DashboardFiltersApplied;
   projectStats: DashboardProjectStats;
   deliveryOverview: DashboardDeliveryOverview;
-  taskOverview: DashboardTaskOverview;
+  materialRequestOverview?: DashboardMaterialRequestOverview;
+  taskOverview?: DashboardTaskOverview;
+  activeSites?: DashboardActiveSite[];
   upcomingDeadlines: DashboardUpcomingDeadline[];
-  recentDeliveries: DashboardRecentDelivery[];
+  projectTimelineOverall?: DashboardTimelineItem[];
+  freightCarriers?: DashboardFreightCarriers;
+  recentActivity?: DashboardRecentActivityItem[];
+  recentDeliveries?: DashboardRecentDelivery[];
 }
 
 export interface DashboardApiResponse {
@@ -708,4 +885,5 @@ export interface DashboardApiResponse {
   message: string;
   data: DashboardResponseData;
 }
+
 

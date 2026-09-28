@@ -4,27 +4,41 @@ import StatsOverview from "../components/cards/StatCard";
 import SuccessModal from "../components/common/SuccessModal";
 import RequestMaterialModel from "../components/requestMaterialModel";
 import MaterialRequestDetailsModal from "../components/materials/MaterialRequestDetailsModal";
-import { Plus } from "lucide-react";
-import { getMaterialRequestsApi, getProjectsApi } from "../api/projects.api";
+import {
+  Plus,
+  Search,
+  X,
+  Loader2,
+  Layers,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+} from "lucide-react";
+import {
+  getMaterialRequestsApi,
+  getMaterialRequestsFiltersApi,
+  exportMaterialRequestsApi,
+} from "../api/projects.api";
 import type { MaterialRequest } from "../types/projects.types";
 
 const formatDateTime = (dateStr: string) => {
   if (!dateStr) return { date: "-", time: "-" };
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return { date: "-", time: "-" };
-  
+
   const date = d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
-  
+
   const time = d.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
-  
+
   return { date, time };
 };
 
@@ -43,6 +57,7 @@ export default function Materials() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
@@ -53,18 +68,20 @@ export default function Materials() {
   const [projectFilter, setProjectFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [requestedByFilter, setRequestedByFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [siteLocationFilter, setSiteLocationFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
 
-  // Fetch Projects for Filter Dropdown
-  const { data: projectsDropdownData } = useQuery({
-    queryKey: ["projects-dropdown"],
-    queryFn: () => getProjectsApi({ page: 1, limit: 100 }),
+  // Fetch Filters from 7.1 API
+  const { data: filtersResponse } = useQuery({
+    queryKey: ["material-requests-filters"],
+    queryFn: getMaterialRequestsFiltersApi,
   });
-  const projectsList = projectsDropdownData?.data?.data?.projects || [];
+  const filtersData = filtersResponse?.data?.data;
 
-  // Fetch Material Requests
+  // Fetch Material Requests List from 7.2 API
   const { data, isLoading, error } = useQuery({
     queryKey: [
       "material-requests",
@@ -73,7 +90,9 @@ export default function Materials() {
       projectFilter,
       departmentFilter,
       statusFilter,
-      requestedByFilter,
+      priorityFilter,
+      siteLocationFilter,
+      searchQuery,
       startDateFilter,
       endDateFilter,
     ],
@@ -81,12 +100,17 @@ export default function Materials() {
       getMaterialRequestsApi({
         page,
         limit,
-        project: projectFilter || undefined,
+        leadId: projectFilter || undefined,
+        projectId: projectFilter || undefined,
         department: departmentFilter || undefined,
         status: statusFilter || undefined,
-        requestedBy: requestedByFilter || undefined,
-        startDate: startDateFilter || undefined,
-        endDate: endDateFilter || undefined,
+        priority: priorityFilter || undefined,
+        siteLocation: siteLocationFilter || undefined,
+        search: searchQuery.trim() || undefined,
+        dateFrom: startDateFilter || undefined,
+        dateTo: endDateFilter || undefined,
+        fromDate: startDateFilter || undefined,
+        toDate: endDateFilter || undefined,
       }),
   });
 
@@ -96,47 +120,108 @@ export default function Materials() {
   const statsData = responseData?.stats;
   const totalPages = Math.ceil(total / limit) || 1;
 
-  // Extract unique departments and requesters from current list for filters
-  const uniqueDepartments = Array.from(
-    new Set(requests.map((r) => r.department).filter(Boolean))
-  );
-  const uniqueRequesters = Array.from(
-    new Map(
-      requests
-        .map((r) => r.requestedBy)
-        .filter((u): u is { userId: string; name: string } => Boolean(u && u.userId))
-        .map((u) => [u.userId, u])
-    ).values()
+  // Filter options derived from API or fallbacks
+  const projectOptions = filtersData?.projects || [];
+  const departmentOptions = filtersData?.departments && filtersData.departments.length > 0
+    ? filtersData.departments
+    : Array.from(new Set(requests.map((r) => r.department).filter(Boolean)));
+  const statusOptions = filtersData?.statuses && filtersData.statuses.length > 0
+    ? filtersData.statuses
+    : ["pending", "approved", "rejected", "fulfilled", "cancelled"];
+  const priorityOptions = filtersData?.priorities && filtersData.priorities.length > 0
+    ? filtersData.priorities
+    : ["low", "medium", "high", "critical"];
+  const siteLocationOptions = filtersData?.siteLocations && filtersData.siteLocations.length > 0
+    ? filtersData.siteLocations
+    : Array.from(new Set(requests.map((r) => r.siteLocation).filter(Boolean)));
+
+  const hasActiveFilters = Boolean(
+    projectFilter ||
+    departmentFilter ||
+    statusFilter ||
+    priorityFilter ||
+    siteLocationFilter ||
+    searchQuery ||
+    startDateFilter ||
+    endDateFilter
   );
 
+  const handleClearFilters = () => {
+    setProjectFilter("");
+    setDepartmentFilter("");
+    setStatusFilter("");
+    setPriorityFilter("");
+    setSiteLocationFilter("");
+    setSearchQuery("");
+    setStartDateFilter("");
+    setEndDateFilter("");
+    setPage(1);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await exportMaterialRequestsApi({
+        leadId: projectFilter || undefined,
+        projectId: projectFilter || undefined,
+        department: departmentFilter || undefined,
+        status: statusFilter || undefined,
+        priority: priorityFilter || undefined,
+        siteLocation: siteLocationFilter || undefined,
+        search: searchQuery.trim() || undefined,
+        dateFrom: startDateFilter || undefined,
+        dateTo: endDateFilter || undefined,
+        fromDate: startDateFilter || undefined,
+        toDate: endDateFilter || undefined,
+      });
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "material-requests.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export material requests", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Replaced emojis with modern SVG icons
   const stats = [
     {
       key: "total",
       title: "Total Requests",
       value: statsData?.totalRequests ?? 0,
       iconBg: "#F5F3FF",
-      iconsvg: <div className="text-purple-600 text-lg">💰</div>,
+      iconsvg: <Layers className="w-4 h-4 text-purple-600" />,
     },
     {
       key: "pending",
       title: "Pending",
       value: statsData?.pending ?? 0,
-      iconBg: "#F0FDF4",
-      iconsvg: <div className="text-green-600 text-lg">🛍️</div>,
+      iconBg: "#FEFCE8",
+      iconsvg: <Clock className="w-4 h-4 text-amber-500" />,
     },
     {
       key: "approved",
       title: "Approved",
       value: statsData?.approved ?? 0,
-      iconBg: "#FEFCE8",
-      iconsvg: <div className="text-yellow-600 text-lg">🔓</div>,
+      iconBg: "#F0FDF4",
+      iconsvg: <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
     },
     {
       key: "rejected",
       title: "Rejected",
       value: statsData?.rejected ?? 0,
       iconBg: "#FEF2F2",
-      iconsvg: <div className="text-red-600 text-lg">⌛</div>,
+      iconsvg: <XCircle className="w-4 h-4 text-red-500" />,
     },
   ];
 
@@ -153,9 +238,15 @@ export default function Materials() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          <button className="bg-white border border-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors text-xs">
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="bg-white border border-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors text-xs disabled:opacity-50"
+          >
+            {isExporting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Export
           </button>
+
           <button
             onClick={() => setIsCreateOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 text-xs"
@@ -166,115 +257,193 @@ export default function Materials() {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Projects
-          </label>
-          <select
-            value={projectFilter}
-            onChange={(e) => {
-              setProjectFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">All Projects</option>
-            {projectsList.map((proj: any) => (
-              <option key={proj._id} value={proj.leadId || proj._id}>
-                {proj.projectName || proj.jobId}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Departments
-          </label>
-          <select
-            value={departmentFilter}
-            onChange={(e) => {
-              setDepartmentFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">All Departments</option>
-            {uniqueDepartments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Status
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Requested By
-          </label>
-          <select
-            value={requestedByFilter}
-            onChange={(e) => {
-              setRequestedByFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">All</option>
-            {uniqueRequesters.map((user) => (
-              <option key={user.userId} value={user.userId}>
-                {user.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Date Range
-          </label>
-          <div className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 flex items-center justify-between cursor-pointer">
-            <input
-              type="date"
-              value={startDateFilter}
+      {/* Filters Section (Dropdowns + Search + Date Range) */}
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          {/* Search by Request ID */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Search
+            </label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Request ID..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-7 pr-7 py-2 text-xs font-bold text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setPage(1);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Projects Filter */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Project
+            </label>
+            <select
+              value={projectFilter}
               onChange={(e) => {
-                setStartDateFilter(e.target.value);
+                setProjectFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-transparent outline-none cursor-pointer w-full text-[10px] sm:text-[11px] text-gray-500"
-            />
-            <span className="mx-1 text-gray-400">-</span>
-            <input
-              type="date"
-              value={endDateFilter}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 truncate"
+            >
+              <option value="">All Projects</option>
+              {projectOptions.map((proj) => (
+                <option key={proj.leadId || proj.jobId} value={proj.leadId}>
+                  {proj.projectName ? `${proj.projectName} (${proj.jobId})` : proj.jobId}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Status
+            </label>
+            <select
+              value={statusFilter}
               onChange={(e) => {
-                setEndDateFilter(e.target.value);
+                setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-transparent outline-none cursor-pointer w-full text-[10px] sm:text-[11px] text-gray-500"
-            />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 capitalize"
+            >
+              <option value="">All Statuses</option>
+              {statusOptions.map((st) => (
+                <option key={st} value={st}>
+                  {st.charAt(0).toUpperCase() + st.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Priority Filter */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Priority
+            </label>
+            <select
+              value={priorityFilter}
+              onChange={(e) => {
+                setPriorityFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 capitalize"
+            >
+              <option value="">All Priorities</option>
+              {priorityOptions.map((pr) => (
+                <option key={pr} value={pr}>
+                  {pr.charAt(0).toUpperCase() + pr.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Department Filter */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Department
+            </label>
+            <select
+              value={departmentFilter}
+              onChange={(e) => {
+                setDepartmentFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">All Departments</option>
+              {departmentOptions.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Site Location Filter */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Site Location
+            </label>
+            <select
+              value={siteLocationFilter}
+              onChange={(e) => {
+                setSiteLocationFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">All Site Locations</option>
+              {siteLocationOptions.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date Range */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Date Range
+            </label>
+            <div className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold text-gray-700 flex items-center justify-between">
+              <input
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => {
+                  setStartDateFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-transparent outline-none cursor-pointer w-full text-[10px] sm:text-[11px] text-gray-600"
+              />
+              <span className="mx-1 text-gray-400">-</span>
+              <input
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => {
+                  setEndDateFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-transparent outline-none cursor-pointer w-full text-[10px] sm:text-[11px] text-gray-600"
+              />
+            </div>
           </div>
         </div>
+
+        {hasActiveFilters && (
+          <div className="flex items-center justify-end pt-1">
+            <button
+              onClick={handleClearFilters}
+              className="text-[11px] font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1.5 transition-colors py-1 px-2 rounded-md hover:bg-gray-50"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset Filters
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Stats Section */}
+      {/* Stats Section with icons instead of emojis */}
       <StatsOverview
         stats={stats}
         gridCols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
@@ -306,7 +475,10 @@ export default function Materials() {
               {isLoading ? (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-gray-500 font-medium">
-                    Loading material requests...
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                      <span>Loading material requests...</span>
+                    </div>
                   </td>
                 </tr>
               ) : error ? (
@@ -324,6 +496,9 @@ export default function Materials() {
               ) : (
                 requests.map((req: MaterialRequest) => {
                   const { date, time } = formatDateTime(req.requestDate);
+                  const statusLower = (req.status || "").toLowerCase();
+                  const priorityLower = (req.priority || "").toLowerCase();
+
                   return (
                     <tr
                       key={req._id}
@@ -344,7 +519,7 @@ export default function Materials() {
                         <p className="font-bold text-gray-700 leading-tight">
                           {req.itemCount} {req.itemCount === 1 ? "Item" : "Items"}
                         </p>
-                        <p className="text-[10px] text-gray-400 font-medium truncate w-32">
+                        <p className="text-[10px] text-gray-400 font-medium truncate w-36">
                           {req.requestedItems.map((i) => i.name).join(", ")}
                         </p>
                       </td>
@@ -359,12 +534,16 @@ export default function Materials() {
                       </td>
                       <td className="px-5 py-3.5">
                         <span
-                          className={`text-[10px] font-bold capitalize ${
-                            req.status === "pending"
-                              ? "text-orange-500"
-                              : req.status === "approved"
-                                ? "text-green-600"
-                                : "text-red-500"
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${
+                            statusLower === "pending"
+                              ? "bg-amber-50 text-amber-600 border border-amber-100"
+                              : statusLower === "approved"
+                                ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                : statusLower === "fulfilled"
+                                  ? "bg-blue-50 text-blue-600 border border-blue-100"
+                                  : statusLower === "cancelled"
+                                    ? "bg-gray-50 text-gray-500 border border-gray-200"
+                                    : "bg-red-50 text-red-500 border border-red-100"
                           }`}
                         >
                           {req.status}
@@ -373,11 +552,13 @@ export default function Materials() {
                       <td className="px-5 py-3.5">
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border capitalize ${
-                            req.priority === "high"
-                              ? "bg-red-50 text-red-600 border-red-100"
-                              : req.priority === "medium"
-                                ? "bg-yellow-50 text-yellow-600 border-yellow-100"
-                                : "bg-blue-50 text-blue-600 border-blue-100"
+                            priorityLower === "critical"
+                              ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : priorityLower === "high"
+                                ? "bg-red-50 text-red-600 border-red-100"
+                                : priorityLower === "medium"
+                                  ? "bg-yellow-50 text-yellow-600 border-yellow-100"
+                                  : "bg-blue-50 text-blue-600 border-blue-100"
                           }`}
                         >
                           {req.priority}

@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useLocation, useSearchParams, type To } from "react-router-dom";
-import toast from "react-hot-toast";
 import {
   loginWithEmailApi,
   forgotPasswordApi,
@@ -42,8 +41,6 @@ export function useLoginMutation() {
     },
     onSuccess: (data) => {
       setAuth(data.accessToken, data.refreshToken, data.user);
-      toast.success("Logged in successfully!");
-
       const from = (location.state as { from?: To } | null)?.from;
       const redirect = searchParams.get("redirect");
       const isAuthPath = (target?: To | null) => {
