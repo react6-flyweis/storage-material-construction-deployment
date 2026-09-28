@@ -9,6 +9,7 @@ export type StatItem = {
   icon?: string;
   iconsvg?: React.ReactNode;
   iconBg?: string;
+  valueColor?: string;
   trend?: {
     value: string;
     label: string;
@@ -32,16 +33,16 @@ export default function StatsOverview({
       {stats.map((item) => (
         <div
           key={item.key}
-          className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex flex-col gap-3"
+          className="bg-white rounded p-4 border border-gray-100 shadow-sm flex flex-col gap-3"
         >
           <div 
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            className="w-8 h-8 rounded flex items-center justify-center shrink-0"
             style={{ backgroundColor: item.iconBg || "#F3F4F6" }}
           >
             {item.iconsvg ? (
               item.iconsvg
             ) : (
-              <img src={item.icon} alt="" className="w-5 h-5" />
+              <img src={item.icon} alt="" className="w-4 h-4" />
             )}
           </div>
           
@@ -49,9 +50,10 @@ export default function StatsOverview({
             {isLoading ? (
               <div className="h-7 w-16 bg-gray-200 animate-pulse rounded my-1" />
             ) : (
-              <p className="text-2xl font-bold text-gray-900">{item.value}</p>
+              <p className={`text-2xl font-bold ${item.valueColor || "text-gray-900"}`}>{item.value}</p>
             )}
             <p className="text-sm text-gray-500 font-medium">{item.title}</p>
+            {item.trend && <div className="w-3/4 border-b border-gray-100 mt-2.5" />}
           </div>
 
           {item.trend && (
@@ -112,7 +114,7 @@ export function ActionButtons({ onAction }: { onAction: (key: string) => void })
         <button
           key={item.key}
           onClick={() => onAction(item.key)}
-          className="min-h-[85px] sm:px-6 px-3 rounded-[8px] flex flex-col items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02]"
+          className="min-h-21.25 sm:px-6 px-3 rounded flex flex-col items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02]"
           style={{ backgroundColor: item.bg }}
         >
           <img src={item.icon} alt={item.title} className="w-5 h-5" />
