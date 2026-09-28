@@ -1,17 +1,37 @@
 import ReactECharts from "echarts-for-react";
+import CardHeader from "../dashboard/CardHeader";
+
+export interface DonutDataItem {
+  value: number;
+  name: string;
+  color: string;
+  displayValue?: string;
+}
 
 interface DonutChartProps {
   title: string;
   total: number;
-  data: { value: number; name: string; color: string }[];
+  data: DonutDataItem[];
   subtitle: string;
+  onViewAll?: () => void;
+  className?: string;
 }
 
-export default function DashboardDonutChart({ title, total, data, subtitle }: DonutChartProps) {
+export default function DashboardDonutChart({
+  title,
+  total,
+  data,
+  subtitle,
+  onViewAll,
+  className = "",
+}: DonutChartProps) {
+  const hasData = total > 0 || data.some((item) => item.value > 0);
+
   const option = {
-    color: data.map(item => item.color),
+    color: hasData ? data.map((item) => item.color) : ["#E5E7EB"],
     tooltip: {
-      trigger: 'item'
+      trigger: 'item',
+      formatter: hasData ? '{b}: {c} ({d}%)' : '{b}',
     },
     legend: {
       show: false
@@ -34,7 +54,9 @@ export default function DashboardDonutChart({ title, total, data, subtitle }: Do
         labelLine: {
           show: false
         },
-        data: data
+        data: hasData
+          ? data.map((item) => ({ value: item.value, name: item.name }))
+          : [{ value: 1, name: "No data" }],
       }
     ],
     graphic: [
@@ -66,14 +88,11 @@ export default function DashboardDonutChart({ title, total, data, subtitle }: Do
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-        <button className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-md hover:bg-gray-50 transition-colors">View All</button>
-      </div>
+    <div className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}>
+      <CardHeader title={title} onViewAll={onViewAll} />
       
-      <div className="flex flex-col items-center justify-center gap-8">
-        <div className="w-48 h-48 flex-shrink-0">
+      <div className="p-6 flex flex-col items-center justify-center gap-8 flex-1">
+        <div className="w-48 h-48 shrink-0">
           <ReactECharts option={option} style={{ height: '100%', width: '100%' }} />
         </div>
         
@@ -84,7 +103,9 @@ export default function DashboardDonutChart({ title, total, data, subtitle }: Do
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                 <span className="text-sm font-medium text-gray-500">{item.name}</span>
               </div>
-              <span className="text-sm font-bold text-gray-900">{item.value}%</span>
+              <span className="text-sm font-bold text-gray-900">
+                {item.displayValue !== undefined ? item.displayValue : `${item.value}%`}
+              </span>
             </div>
           ))}
         </div>
@@ -92,3 +113,4 @@ export default function DashboardDonutChart({ title, total, data, subtitle }: Do
     </div>
   );
 }
+
