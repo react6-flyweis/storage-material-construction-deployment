@@ -12,55 +12,61 @@ import {
   Building2,
   Download,
   FileText,
-  Bell,
   Package,
-  SquarePen,
-  RotateCcw,
-  CalendarSync,
   CheckCircle2,
-  X,
+  Loader2,
+  ArrowRight,
+  Layers,
+  Wrench,
+  AlertCircle,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   getDeliveryDetailsApi,
   getProjectDetailsApi,
-  getProjectDeliveryApi,
+  getProjectMaterialDeliveriesApi,
   downloadDeliveryPackingListApi,
   downloadDeliveryBillOfLadingApi,
 } from "@/api/projects.api";
+import type { ConstructionDelivery } from "@/types/projects.types";
 
-// Delivery Status sequence and definitions
-export type DeliveryStatusType =
-  | "scheduled"
-  | "material_prepared"
-  | "loaded"
-  | "picked_up"
-  | "in_transit"
-  | "staged"
-  | "dispatched_to_site"
-  | "delivered";
+const statusStyles: Record<string, { bg: string; text: string; dot: string; label: string }> = {
+  scheduled: { bg: "bg-[#E6F0FF]", text: "text-[#155DFC]", dot: "bg-[#155DFC]", label: "Scheduled" },
+  material_prepared: { bg: "bg-[#EEF2FF]", text: "text-[#4F46E5]", dot: "bg-[#4F46E5]", label: "Material Prepared" },
+  loaded: { bg: "bg-[#FDF4FF]", text: "text-[#C026D3]", dot: "bg-[#C026D3]", label: "Loaded" },
+  picked_up: { bg: "bg-[#FFF7ED]", text: "text-[#EA580C]", dot: "bg-[#EA580C]", label: "Picked Up" },
+  in_transit: { bg: "bg-[#EFF6FF]", text: "text-[#2563EB]", dot: "bg-[#2563EB]", label: "In Transit" },
+  staged: { bg: "bg-[#FEFCE8]", text: "text-[#CA8A04]", dot: "bg-[#CA8A04]", label: "Staged" },
+  dispatched_to_site: { bg: "bg-[#ECFDF5]", text: "text-[#059669]", dot: "bg-[#059669]", label: "Dispatched To Site" },
+  delivered: { bg: "bg-[#E6FFEF]", text: "text-[#00C853]", dot: "bg-[#00C853]", label: "Delivered" },
+  partial_received: { bg: "bg-[#FFFBEB]", text: "text-[#D97706]", dot: "bg-[#D97706]", label: "Partial Received" },
+  received: { bg: "bg-[#E6FFEF]", text: "text-[#00C853]", dot: "bg-[#00C853]", label: "Received" },
+  confirmed: { bg: "bg-[#E6FFEF]", text: "text-[#00C853]", dot: "bg-[#00C853]", label: "Confirmed" },
+};
 
-const STATUS_SEQUENCE: DeliveryStatusType[] = [
-  "scheduled",
-  "material_prepared",
-  "loaded",
-  "picked_up",
-  "in_transit",
-  "staged",
-  "dispatched_to_site",
-  "delivered",
-];
+const formatDateTime = (dateStr?: string | null, timeStr?: string | null) => {
+  if (!dateStr) return "-";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const dateFormatted = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return `${dateFormatted}${timeStr ? `, ${timeStr}` : ""}`;
+  } catch {
+    return dateStr;
+  }
+};
 
-const statusStyles: Record<string, { bg: string; text: string; label: string }> = {
-  scheduled: { bg: "bg-[#E6F0FF]", text: "text-[#155DFC]", label: "Scheduled" },
-  material_prepared: { bg: "bg-[#EEF2FF]", text: "text-[#4F46E5]", label: "Material Prepared" },
-  loaded: { bg: "bg-[#FDF4FF]", text: "text-[#C026D3]", label: "Loaded" },
-  picked_up: { bg: "bg-[#FFF7ED]", text: "text-[#EA580C]", label: "Picked Up" },
-  in_transit: { bg: "bg-[#EFF6FF]", text: "text-[#2563EB]", label: "In Transit" },
-  staged: { bg: "bg-[#FEFCE8]", text: "text-[#CA8A04]", label: "Staged" },
-  dispatched_to_site: { bg: "bg-[#ECFDF5]", text: "text-[#059669]", label: "Dispatched To Site" },
-  delivered: { bg: "bg-[#E6FFEF]", text: "text-[#00C853]", label: "Delivered" },
-  confirmed: { bg: "bg-[#E6FFEF]", text: "text-[#00C853]", label: "Confirmed" },
+const getPocInitials = (name?: string | null) => {
+  if (!name || name === "-") return "POC";
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "POC"
+  );
 };
 
 export default function DeliveryDetailsPage() {
@@ -69,132 +75,115 @@ export default function DeliveryDetailsPage() {
   const [searchParams] = useSearchParams();
 
   // Route can be /delivery-details/:id or /projects/:id/material-delivery or /projects/:id/delivery-details/:deliveryId
-  const targetId = paramDeliveryId || paramId || searchParams.get("id") || "";
+  const isMaterialDeliveryRoute = window.location.pathname.includes("/material-delivery");
+  const projectId = isMaterialDeliveryRoute ? paramId : "";
+  const initialDeliveryId = paramDeliveryId || (!isMaterialDeliveryRoute ? paramId : "") || searchParams.get("id") || "";
 
-  const [activeModal, setActiveModal] = useState<"reschedule" | "edit" | "status" | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // Local overrides for reactive edits
-  const [localStatus, setLocalStatus] = useState<string | null>(null);
-  const [localDate, setLocalDate] = useState<string | null>(null);
-  const [localTimeWindow, setLocalTimeWindow] = useState<string | null>(null);
-  const [localDescription, setLocalDescription] = useState<string | null>(null);
-  const [localLocation, setLocalLocation] = useState<string | null>(null);
-
-  // Try fetching delivery details
-  const { data: deliveryRes } = useQuery({
-    queryKey: ["delivery-details", targetId],
-    queryFn: () => getDeliveryDetailsApi(targetId),
-    enabled: Boolean(targetId),
-    retry: false,
-  });
-
-  // Also query project details in case targetId is a projectId or has project details
-  const { data: projectRes } = useQuery({
-    queryKey: ["project-details", targetId],
-    queryFn: () => getProjectDetailsApi(targetId),
-    enabled: Boolean(targetId),
-    retry: false,
-  });
-
-  // Also query plant delivery in case it's in the plant API
-  const { data: plantDeliveryRes } = useQuery({
-    queryKey: ["plant-project-delivery", targetId],
-    queryFn: () => getProjectDeliveryApi(targetId),
-    enabled: Boolean(targetId),
-    retry: false,
-  });
-
-  const apiDelivery =
-    (deliveryRes?.data?.data as any)?.delivery ||
-    (plantDeliveryRes?.data?.data as any)?.delivery ||
-    projectRes?.data?.data?.deliveries?.find((d: any) => d._id === targetId || d.deliveryNumber === targetId) ||
-    projectRes?.data?.data?.deliveries?.[0];
-
-  const project = projectRes?.data?.data?.project || apiDelivery?.project;
-
-  // Resolved values with sensible defaults
-  const deliveryNumber = apiDelivery?.deliveryNumber || (targetId.startsWith("DEL-") ? targetId : `DEL-${targetId.slice(-6).toUpperCase() || "78201"}`);
-  const status = localStatus || apiDelivery?.status || "scheduled";
-  const projectName = project?.projectName || project?.jobId || "ABC Construction";
-  const customerName =
-    apiDelivery?.customer?.customerName ||
-    (project?.customerId ? `${project.customerId.firstName || ""} ${project.customerId.lastName || ""}`.trim() : "John Doe");
-  const deliveryDate = localDate || apiDelivery?.deliveryDate || apiDelivery?.schedule?.deliveryDate || "2026-10-02";
-  const timeWindow = localTimeWindow || apiDelivery?.schedule?.timings || apiDelivery?.schedule?.deliveryTime || "08:00 AM - 12:00 PM";
-  const siteAddress = localLocation || apiDelivery?.deliveryLocation || project?.location || "742 Evergreen Terrace, Springfield, OR";
-  const description = localDescription || apiDelivery?.description || apiDelivery?.formDetails?.description || "Structural Framing & Wall Studs";
-  const materialType = apiDelivery?.materialType || apiDelivery?.formDetails?.materialType || "Structural Steel";
-  const pickupDate = apiDelivery?.pickupDate || apiDelivery?.schedule?.pickupDate || "2026-09-30";
-  const vendorName = apiDelivery?.vendor || apiDelivery?.vendorDetails?.vendorName || "SteelFab Corp";
-  const vendorContact = apiDelivery?.vendorContact || apiDelivery?.vendorDetails?.personName || "Sarah Jenkins";
-  const vendorPhone = apiDelivery?.vendorPhone || apiDelivery?.vendorDetails?.number || "+1 (555) 234-5678";
-  const vendorEmail = apiDelivery?.vendorEmail || apiDelivery?.vendorDetails?.email || "sarah@steelfab.com";
-  const carrierName = apiDelivery?.carrier?.driverName || apiDelivery?.carrier || "Apex Freight Lines";
-  const carrierPhone = apiDelivery?.carrier?.phone || "+1 (555) 876-5432";
-  const carrierEmail = apiDelivery?.carrier?.email || "dispatch@apexfreight.com";
-  const internalOwnerName = "Rahul Sharma";
-  const internalOwnerPhone = "+1 (555) 432-1098";
-  const internalOwnerEmail = "r.sharma@mrstorage.com";
-  const pocName = apiDelivery?.pocName || customerName;
-  const pocPhone = apiDelivery?.pocPhone || "+1 (555) 987-6543";
-
-  const getPocInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "POC";
-  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleDownloadPackingList = async () => {
-    try {
-      showToast("Downloading packing list...");
-      await downloadDeliveryPackingListApi(targetId);
+  // 1. If on /projects/:id/material-delivery, fetch project's material deliveries via GET /api/construction/projects/:leadId/material-deliveries
+  const {
+    data: projectDeliveriesRes,
+    isLoading: isProjectDeliveriesLoading,
+  } = useQuery({
+    queryKey: ["project-material-deliveries", projectId],
+    queryFn: () => getProjectMaterialDeliveriesApi(projectId!),
+    enabled: Boolean(isMaterialDeliveryRoute && projectId),
+    retry: false,
+  });
+
+  // Parse list of deliveries returned from the project material-deliveries endpoint
+  const rawProjectDeliveries = projectDeliveriesRes?.data?.data || projectDeliveriesRes?.data;
+  const projectDeliveriesList: ConstructionDelivery[] = Array.isArray(rawProjectDeliveries?.deliveries)
+    ? rawProjectDeliveries.deliveries
+    : Array.isArray(rawProjectDeliveries)
+    ? rawProjectDeliveries
+    : rawProjectDeliveries?.delivery
+    ? [rawProjectDeliveries.delivery]
+    : rawProjectDeliveries?.deliveryId
+    ? [rawProjectDeliveries]
+    : [];
+
+  const firstProjectDelivery: ConstructionDelivery | undefined = projectDeliveriesList[0];
+
+  // Also query project details as fallback
+  const { data: projectRes } = useQuery({
+    queryKey: ["project-details", projectId],
+    queryFn: () => getProjectDetailsApi(projectId!),
+    enabled: Boolean(isMaterialDeliveryRoute && projectId && !isProjectDeliveriesLoading && projectDeliveriesList.length === 0),
+    retry: false,
+  });
+
+  // Resolve the delivery ID (from URL, or from the project material-deliveries response)
+  const resolvedDeliveryId =
+    initialDeliveryId ||
+    firstProjectDelivery?.deliveryId ||
+    (firstProjectDelivery as any)?._id ||
+    projectRes?.data?.data?.deliveries?.[0]?._id ||
+    (!isMaterialDeliveryRoute ? paramId : "") ||
+    "";
+
+  // 2. Fetch single delivery details via GET /api/construction/deliveries/:deliveryId
+  const { data: deliveryRes, isLoading: isDeliveryLoading } = useQuery({
+    queryKey: ["delivery-details", resolvedDeliveryId],
+    queryFn: () => getDeliveryDetailsApi(resolvedDeliveryId),
+    enabled: Boolean(resolvedDeliveryId),
+    retry: 1,
+  });
+
+  const delivery: ConstructionDelivery | undefined =
+    deliveryRes?.data?.data?.delivery ||
+    firstProjectDelivery ||
+    (projectRes?.data?.data?.deliveries?.find(
+      (d) => d._id === resolvedDeliveryId || d.deliveryNumber === resolvedDeliveryId
+    ) as unknown as ConstructionDelivery) ||
+    (projectRes?.data?.data?.deliveries?.[0] as unknown as ConstructionDelivery);
+
+  const activeDownloadId = delivery?.deliveryId || (delivery as any)?._id || resolvedDeliveryId;
+
+  // Download mutations
+  const downloadPackingListMutation = useMutation({
+    mutationFn: () => downloadDeliveryPackingListApi(activeDownloadId),
+    onSuccess: (res) => {
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `PackingList_${delivery?.deliveryNumber || activeDownloadId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
       showToast("Packing list downloaded successfully.");
-    } catch {
-      showToast("Packing list generated.");
-    }
-  };
+    },
+    onError: () => {
+      showToast("Failed to download packing list.");
+    },
+  });
 
-  const handleDownloadBillOfLading = async () => {
-    try {
-      showToast("Downloading bill of lading...");
-      await downloadDeliveryBillOfLadingApi(targetId);
+  const downloadBillOfLadingMutation = useMutation({
+    mutationFn: () => downloadDeliveryBillOfLadingApi(activeDownloadId),
+    onSuccess: (res) => {
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `BillOfLading_${delivery?.deliveryNumber || activeDownloadId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
       showToast("Bill of lading downloaded successfully.");
-    } catch {
-      showToast("Bill of lading generated.");
-    }
-  };
-
-  const handleAdvanceStatus = () => {
-    const curNorm = status.toLowerCase().replace(/\s+/g, "_");
-    const curIdx = STATUS_SEQUENCE.indexOf(curNorm as DeliveryStatusType);
-    const nextStatus = curIdx < STATUS_SEQUENCE.length - 1 ? STATUS_SEQUENCE[curIdx + 1] : STATUS_SEQUENCE[0];
-    setLocalStatus(nextStatus);
-    showToast(`Status updated to ${statusStyles[nextStatus]?.label || nextStatus}`);
-    setActiveModal(null);
-  };
-
-  const handleRescheduleSubmit = (newDate: string, newTime: string) => {
-    setLocalDate(newDate);
-    setLocalTimeWindow(newTime);
-    setActiveModal(null);
-    showToast(`Delivery rescheduled to ${newDate} (${newTime})`);
-  };
-
-  const handleEditSubmit = (newDesc: string, newLoc: string) => {
-    setLocalDescription(newDesc);
-    setLocalLocation(newLoc);
-    setActiveModal(null);
-    showToast("Delivery details updated successfully.");
-  };
+    },
+    onError: () => {
+      showToast("Failed to download bill of lading.");
+    },
+  });
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -204,7 +193,115 @@ export default function DeliveryDetailsPage() {
     }
   };
 
-  const currentBadge = statusStyles[status.toLowerCase().replace(/\s+/g, "_")] || statusStyles.scheduled;
+  const isLoading =
+    (isMaterialDeliveryRoute ? isProjectDeliveriesLoading : isDeliveryLoading) && !delivery;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-3 max-w-7xl mx-auto px-4">
+        <Loader2 className="w-9 h-9 text-[#2563EB] animate-spin" />
+        <p className="text-sm font-bold text-gray-600">Loading delivery details...</p>
+      </div>
+    );
+  }
+
+  if (!delivery && !isLoading) {
+    return (
+      <div className="max-w-xl mx-auto py-24 px-4 text-center space-y-4">
+        <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-gray-900">
+          {isMaterialDeliveryRoute ? "No Material Delivery Found" : "Delivery Not Found"}
+        </h2>
+        <p className="text-sm text-gray-500">
+          {isMaterialDeliveryRoute
+            ? "There are currently no confirmed or scheduled material deliveries for this project."
+            : "The requested delivery details could not be found or loaded."}
+        </p>
+        <button
+          onClick={handleBack}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-semibold rounded-lg hover:bg-[#1D4ED8] transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>{isMaterialDeliveryRoute ? "Back to Project" : "Go Back"}</span>
+        </button>
+      </div>
+    );
+  }
+
+  const statusHistory = (delivery as any)?.statusHistory || [];
+  const activeStatus =
+    delivery?.status || (statusHistory.length > 0 ? statusHistory[statusHistory.length - 1]?.status : null) || "scheduled";
+
+  const normStatus = (activeStatus || "").toLowerCase().replace(/[\s-]+/g, "_");
+  const currentBadge = statusStyles[normStatus] || {
+    bg: "bg-gray-100",
+    text: "text-gray-700",
+    dot: "bg-gray-500",
+    label: activeStatus ? activeStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Scheduled",
+  };
+
+  const formattedStatusText = activeStatus
+    ? activeStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
+    : "-";
+
+  interface StatusStep {
+    label: string;
+    status: "current" | "completed";
+    timestamp?: string;
+  }
+
+  const steps: StatusStep[] =
+    statusHistory.length > 0
+      ? statusHistory.map((item: any, idx: number): StatusStep => {
+          const isCurrent = idx === statusHistory.length - 1;
+          return {
+            label: item.status ? item.status.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "-",
+            status: isCurrent ? "current" : "completed",
+            timestamp: item.changedAt,
+          };
+        })
+      : activeStatus
+      ? [
+          {
+            label: formattedStatusText,
+            status: "current",
+            timestamp: undefined,
+          },
+        ]
+      : [];
+
+  const del = delivery as any;
+
+  const deliveryNumber = del?.deliveryNumber || del?.deliveryId || resolvedDeliveryId || "-";
+  const projectName = del?.project?.projectName || del?.project?.jobId || projectRes?.data?.data?.project?.projectName || "-";
+  const receivingPoc = del?.receivingPoc || del?.siteContact?.contactName || del?.pocName || "-";
+  const pocPhone = del?.pickupContactPhone || del?.siteContact?.phone || del?.pocPhone || del?.carrier?.phone || "-";
+  const pocTitle = del?.siteContact?.contactTitle || "Site Receiving Lead";
+  const deliveryDate = formatDateTime(del?.schedule?.deliveryDate || del?.deliveryDate, null);
+  const timeWindow = del?.schedule?.deliveryTime || del?.schedule?.timings || "-";
+  const siteAddress = del?.deliveryLocation || del?.project?.location || "-";
+  const originAddress = del?.pickupLocation || "-";
+  const description = del?.description?.trim() || "-";
+  const materialType = del?.materialType?.trim() || "-";
+  const pickupDate = formatDateTime(del?.schedule?.pickupDate, null);
+  const pickupTime = del?.schedule?.pickupTime || "-";
+  const stagingArea = del?.stagingArea || "-";
+  const formattedWeight = del?.loadWeight ? `${Number(del.loadWeight).toLocaleString()} lbs` : "-";
+  const packageCount = del?.packageCount ? `${del.packageCount} Packages` : "-";
+  const loadingEquipment = del?.loadingEquipment?.length ? del.loadingEquipment.join(", ") : "-";
+  const notes = del?.notes || (del?.loadingEquipment?.length ? `Loading equipment required: ${del.loadingEquipment.join(", ")}` : "No special instructions provided.");
+  const carrierDriver = del?.carrier?.driverName || (typeof del?.carrier === "string" ? del.carrier : "-");
+  const carrierPhone = del?.carrier?.driverPhone || del?.carrier?.phone || "-";
+  const carrierEmail = del?.carrier?.email || "-";
+  const truckNumber = del?.carrier?.truckNumber || "-";
+
+  const etaText = del?.schedule?.deliveryTime
+    ? `ETA ${del.schedule.deliveryTime}`
+    : del?.schedule?.timings
+    ? del.schedule.timings
+    : null;
 
   return (
     <div className="space-y-6 pb-16 max-w-7xl mx-auto px-2 sm:px-4">
@@ -228,11 +325,18 @@ export default function DeliveryDetailsPage() {
             <span>Back</span>
           </button>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-              Delivery Details
-            </h1>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+                Delivery Details
+              </h1>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${currentBadge.bg} ${currentBadge.text}`}
+              >
+                {currentBadge.label}
+              </span>
+            </div>
             <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">
-              {deliveryNumber} - {description}
+              {deliveryNumber} {description !== "-" ? `• ${description}` : ""}
             </p>
           </div>
         </div>
@@ -240,19 +344,29 @@ export default function DeliveryDetailsPage() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setActiveModal("reschedule")}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+            onClick={() => downloadPackingListMutation.mutate()}
+            disabled={downloadPackingListMutation.isPending}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RotateCcw className="w-4 h-4 text-gray-500" />
-            <span>Reschedule</span>
+            {downloadPackingListMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+            ) : (
+              <Download className="w-4 h-4 text-gray-500" />
+            )}
+            <span>Packing List</span>
           </button>
           <button
             type="button"
-            onClick={() => setActiveModal("edit")}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+            onClick={() => downloadBillOfLadingMutation.mutate()}
+            disabled={downloadBillOfLadingMutation.isPending}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
           >
-            <SquarePen className="w-4 h-4" />
-            <span>Edit Delivery</span>
+            {downloadBillOfLadingMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            <span>Bill of Lading</span>
           </button>
         </div>
       </div>
@@ -261,6 +375,44 @@ export default function DeliveryDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
         {/* Left Column */}
         <div className="space-y-6">
+          {/* Delivery Flow Banner */}
+          <div className="bg-[#F0F9FF] border border-[#BEE3F8]/60 rounded-2xl p-5 shadow-xs">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+              Delivery Flow
+            </p>
+            <div className="flex items-center justify-between gap-4 px-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-[#3182CE] rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Origin</p>
+                  <p className="text-sm font-bold text-gray-900 leading-snug truncate" title={originAddress}>
+                    {originAddress}
+                  </p>
+                </div>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-2 text-gray-300 shrink-0">
+                <span className="w-8 border-t border-dashed border-gray-300" />
+                <ArrowRight className="w-5 h-5 text-blue-500" />
+                <span className="w-8 border-t border-dashed border-gray-300" />
+              </div>
+
+              <div className="flex items-center gap-3 min-w-0 text-right sm:text-left">
+                <div className="w-10 h-10 bg-[#F97316] rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Destination</p>
+                  <p className="text-sm font-bold text-gray-900 leading-snug truncate" title={siteAddress}>
+                    {siteAddress}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Delivery Overview Card */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
@@ -284,10 +436,10 @@ export default function DeliveryDetailsPage() {
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Customer</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Receiving POC</p>
                 <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                   <User className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>{customerName}</span>
+                  <span>{receivingPoc}</span>
                 </div>
               </div>
 
@@ -300,7 +452,7 @@ export default function DeliveryDetailsPage() {
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Time Window</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Time Window / ETA</p>
                 <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                   <Clock className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>{timeWindow}</span>
@@ -308,7 +460,7 @@ export default function DeliveryDetailsPage() {
               </div>
 
               <div className="sm:col-span-2 space-y-1">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Site Address</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Site Delivery Address</p>
                 <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                   <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>{siteAddress}</span>
@@ -332,157 +484,141 @@ export default function DeliveryDetailsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Material Category</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Material Type</p>
                   <p className="text-sm font-semibold text-gray-900">{materialType}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pickup Date</p>
                   <p className="text-sm font-semibold text-gray-900">{pickupDate}</p>
                 </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pickup Time</p>
+                  <p className="text-sm font-semibold text-gray-900">{pickupTime}</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* 2x2 Vendor & Carrier Grid */}
+          {/* Carrier & Material Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Vendor */}
+            {/* Carrier Information */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-3.5">
-              <h3 className="text-sm font-bold text-gray-900">Vendor</h3>
-              <p className="text-base font-bold text-gray-900">{vendorName}</p>
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-blue-600" />
+                <span>Carrier & Driver</span>
+              </h3>
+              <p className="text-base font-bold text-gray-900">
+                {carrierDriver !== "-" ? carrierDriver : "Assigned Carrier"}
+              </p>
               <div className="space-y-2 text-xs font-medium text-gray-600">
-                <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span>{vendorContact}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span>{vendorPhone}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span className="truncate">{vendorEmail}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Delivery Company */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-3.5">
-              <h3 className="text-sm font-bold text-gray-900">Delivery Company</h3>
-              <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-blue-600 shrink-0" />
-                <p className="text-base font-bold text-gray-900">{carrierName}</p>
-              </div>
-              <div className="space-y-2 text-xs font-medium text-gray-600">
-                <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span>Driver POC Assigned</span>
-                </div>
+                {truckNumber !== "-" && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-400 uppercase text-[10px]">Truck:</span>
+                    <span className="font-bold text-gray-800">{truckNumber}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                   <span>{carrierPhone}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span className="truncate">{carrierEmail}</span>
-                </div>
+                {carrierEmail !== "-" && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span className="truncate">{carrierEmail}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Internal Owner */}
+            {/* Load & Material Metrics */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-3.5">
-              <h3 className="text-sm font-bold text-gray-900">Internal Owner</h3>
-              <p className="text-base font-bold text-gray-900">{internalOwnerName}</p>
-              <div className="space-y-2 text-xs font-medium text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span>{internalOwnerPhone}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span className="truncate">{internalOwnerEmail}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Priority, Type, Size */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-3.5">
-              <h3 className="text-sm font-bold text-gray-900">Delivery Priority, Type, Size</h3>
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-purple-600" />
+                <span>Load & Quantity</span>
+              </h3>
               <div className="space-y-2 text-xs text-gray-700">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-500">Priority:</span>
-                  <span className="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">Critical</span>
+                  <span className="font-semibold text-gray-400 uppercase text-[11px]">Load Weight:</span>
+                  <span className="font-bold text-gray-900">{formattedWeight}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-500">Delivery Type:</span>
-                  <span className="font-bold text-gray-900">{materialType}</span>
+                  <span className="font-semibold text-gray-400 uppercase text-[11px]">Package Count:</span>
+                  <span className="font-bold text-gray-900">{packageCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-500">Load Size / Qty:</span>
-                  <span className="font-bold text-gray-900">8 bundles / 3,420 lbs</span>
+                  <span className="font-semibold text-gray-400 uppercase text-[11px]">Staging Area:</span>
+                  <span className="font-bold text-gray-900">{stagingArea}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Site Coordination */}
+          {/* Site Instructions & Equipment */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 pb-2 border-b border-gray-100">
-              Site Coordination
+              Site Coordination & Instructions
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
               <div className="space-y-1">
-                <p className="font-semibold text-gray-400 uppercase">Site Instructions</p>
-                <p className="font-medium text-gray-800">Enter via Gate 3 on North Perimeter. Check in with security guard before staging.</p>
+                <p className="font-semibold text-gray-400 uppercase text-[11px] flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5 text-gray-500" />
+                  <span>Required Loading Equipment</span>
+                </p>
+                <p className="font-medium text-gray-800">{loadingEquipment}</p>
               </div>
               <div className="space-y-1">
-                <p className="font-semibold text-gray-400 uppercase">Required Equipment</p>
-                <p className="font-medium text-gray-800">5-Ton Rough Terrain Forklift, Rigging Slings</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-gray-400 uppercase">Equipment Confirmation</p>
-                <p className="font-bold text-emerald-600 flex items-center gap-1">✔ Confirmed on site</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-gray-400 uppercase">Special Notes</p>
-                <p className="font-medium text-gray-800">Clear crane radius prior to unstrapping flatbed trailer.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Freight Link */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-xs">
-            <h2 className="text-base sm:text-lg font-bold text-gray-900 pb-2 border-b border-gray-100 mb-4">
-              Freight Link
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
-              <div className="space-y-1">
-                <p className="font-semibold text-gray-400 uppercase">Awarded Carrier</p>
-                <p className="font-bold text-gray-900">{carrierName}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-gray-400 uppercase">Quoted Freight Price</p>
-                <p className="font-bold text-blue-600 text-base">$1,450.00 USD</p>
+                <p className="font-semibold text-gray-400 uppercase text-[11px]">Special Instructions / Notes</p>
+                <p className="font-medium text-gray-800 italic">{notes}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column */}
+        {/* Right Column / Sidebar */}
         <div className="space-y-6">
-          {/* Receiving POC Card */}
+          {/* Delivery Status Card - Strictly read-only, NO update option */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-3.5">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Delivery Status
+            </h2>
+            <div className="flex items-center justify-between p-3.5 bg-gray-50/80 rounded-xl border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${currentBadge.dot}`} />
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{formattedStatusText}</p>
+                  {etaText && (
+                    <p className="text-[11px] font-medium text-gray-500 mt-0.5">{etaText}</p>
+                  )}
+                </div>
+              </div>
+              <span
+                className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${currentBadge.bg} ${currentBadge.text}`}
+              >
+                {currentBadge.label}
+              </span>
+            </div>
+            {stagingArea !== "-" && (
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
+                <span className="font-semibold text-gray-400 uppercase text-[11px]">Staging Area</span>
+                <span className="font-bold text-gray-900">{stagingArea}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Receiving Point of Contact Card */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
               Receiving Point of Contact
             </h2>
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
-                {getPocInitials(pocName)}
+                {getPocInitials(receivingPoc)}
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-gray-900 text-sm truncate">{pocName}</p>
-                <p className="text-xs text-gray-500 font-medium">Site Superintendent</p>
+                <p className="font-bold text-gray-900 text-sm truncate">{receivingPoc}</p>
+                <p className="text-xs text-gray-500 font-medium">{pocTitle}</p>
               </div>
             </div>
             <div className="pt-2 border-t border-gray-50 flex items-center gap-2 text-xs text-gray-600 font-medium">
@@ -491,345 +627,89 @@ export default function DeliveryDetailsPage() {
             </div>
           </div>
 
-          {/* Quick Actions Card */}
+          {/* Documents & Downloads */}
           <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs space-y-3">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">
-              Quick Actions
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Documents & Downloads
             </h2>
 
-            {/* Status Update Button */}
+            {/* Download Packing List */}
             <button
               type="button"
-              onClick={() => setActiveModal("status")}
-              className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all shadow-2xs group text-left cursor-pointer"
+              onClick={() => downloadPackingListMutation.mutate()}
+              disabled={downloadPackingListMutation.isPending}
+              className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all shadow-2xs text-left cursor-pointer disabled:opacity-50"
             >
               <div className="flex items-center gap-3">
-                <RotateCcw className="w-4 h-4 text-blue-600 shrink-0" />
-                <span className="text-xs sm:text-sm font-bold text-gray-800">
-                  Status: {currentBadge.label}
+                <Download className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                  Download Packing List
                 </span>
               </div>
-              <SquarePen className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+              {downloadPackingListMutation.isPending && (
+                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              )}
             </button>
 
-            {/* Reschedule Button */}
+            {/* Download Bill of Lading */}
             <button
               type="button"
-              onClick={() => setActiveModal("reschedule")}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all shadow-2xs text-left cursor-pointer"
+              onClick={() => downloadBillOfLadingMutation.mutate()}
+              disabled={downloadBillOfLadingMutation.isPending}
+              className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all shadow-2xs text-left cursor-pointer disabled:opacity-50"
             >
-              <CalendarSync className="w-4 h-4 text-gray-600 shrink-0" />
-              <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                Reschedule Delivery
-              </span>
-            </button>
-
-            {/* Send Reminder Button */}
-            <button
-              type="button"
-              onClick={() => showToast("Reminder notification sent to carrier and site POC.")}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all shadow-2xs text-left cursor-pointer"
-            >
-              <Bell className="w-4 h-4 text-gray-600 shrink-0" />
-              <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                Send Reminder Now
-              </span>
-            </button>
-
-            {/* Download Details */}
-            <button
-              type="button"
-              onClick={handleDownloadPackingList}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all shadow-2xs text-left cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-gray-600 shrink-0" />
-              <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                Download Details
-              </span>
-            </button>
-
-            {/* View Documents */}
-            <button
-              type="button"
-              onClick={handleDownloadBillOfLading}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all shadow-2xs text-left cursor-pointer"
-            >
-              <FileText className="w-4 h-4 text-gray-600 shrink-0" />
-              <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                View Documents (BOL)
-              </span>
+              <div className="flex items-center gap-3">
+                <FileText className="w-4 h-4 text-gray-600 shrink-0" />
+                <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                  Download Bill of Lading (BOL)
+                </span>
+              </div>
+              {downloadBillOfLadingMutation.isPending && (
+                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              )}
             </button>
           </div>
 
           {/* Status History Card */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
               Status History
             </h2>
-            <div className="space-y-4 relative pl-4 border-l-2 border-blue-100 ml-2">
-              <div className="relative space-y-1">
-                <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-blue-50" />
-                <p className="text-xs font-bold text-gray-900">{currentBadge.label}</p>
-                <p className="text-[11px] text-gray-400">Current status</p>
-                <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
-                  Materials are verified and staged for the scheduled time window.
-                </p>
+            {steps.length > 0 ? (
+              <div className="space-y-4 relative pl-4 border-l-2 border-blue-100 ml-2">
+                {steps
+                  .slice()
+                  .reverse()
+                  .map((step, idx) => (
+                    <div key={idx} className="relative space-y-1">
+                      <div
+                        className={`absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full ${
+                          step.status === "current"
+                            ? "bg-blue-600 ring-4 ring-blue-50"
+                            : "bg-emerald-500 ring-4 ring-emerald-50"
+                        }`}
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-gray-900">{step.label}</p>
+                        {step.status === "current" && (
+                          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
+                            Current
+                          </span>
+                        )}
+                      </div>
+                      {step.timestamp && (
+                        <p className="text-[11px] text-gray-400">
+                          {formatDateTime(step.timestamp)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
               </div>
-
-              <div className="relative space-y-1">
-                <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-gray-300" />
-                <p className="text-xs font-bold text-gray-700">Scheduled</p>
-                <p className="text-[11px] text-gray-400">2026-09-28 09:30 AM</p>
-                <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
-                  Delivery created and confirmed with plant dispatcher.
-                </p>
-              </div>
-            </div>
+            ) : (
+              <p className="text-xs text-gray-400">No status history available.</p>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Status Modal */}
-      {activeModal === "status" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Update Delivery Status</h3>
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="p-1 hover:bg-gray-100 rounded-full text-gray-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-xs text-gray-500">
-                Advance delivery to the next stage in the logistics sequence:
-              </p>
-              <div className="space-y-2">
-                {STATUS_SEQUENCE.map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => {
-                      setLocalStatus(st);
-                      showToast(`Status updated to ${statusStyles[st]?.label || st}`);
-                      setActiveModal(null);
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-between cursor-pointer ${
-                      status === st
-                        ? "bg-blue-50 border-blue-300 text-blue-700"
-                        : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
-                    }`}
-                  >
-                    <span>{statusStyles[st]?.label || st}</span>
-                    {status === st && <span className="text-[10px] text-blue-600 uppercase">Current</span>}
-                  </button>
-                ))}
-              </div>
-              <div className="flex justify-end pt-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={handleAdvanceStatus}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm"
-                >
-                  Advance to Next Stage
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reschedule Modal */}
-      {activeModal === "reschedule" && (
-        <RescheduleModal
-          isOpen={true}
-          currentDate={deliveryDate}
-          currentTime={timeWindow}
-          onClose={() => setActiveModal(null)}
-          onSubmit={handleRescheduleSubmit}
-        />
-      )}
-
-      {/* Edit Modal */}
-      {activeModal === "edit" && (
-        <EditModal
-          isOpen={true}
-          currentDescription={description}
-          currentLocation={siteAddress}
-          onClose={() => setActiveModal(null)}
-          onSubmit={handleEditSubmit}
-        />
-      )}
-    </div>
-  );
-}
-
-function RescheduleModal({
-  isOpen,
-  currentDate,
-  currentTime,
-  onClose,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  currentDate: string;
-  currentTime: string;
-  onClose: () => void;
-  onSubmit: (date: string, time: string) => void;
-}) {
-  const [date, setDate] = useState(currentDate);
-  const [time, setTime] = useState(currentTime);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-base font-bold text-gray-900">Reschedule Delivery</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full text-gray-400"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit(date, time);
-          }}
-          className="p-6 space-y-4"
-        >
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              New Delivery Date
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              Time Window
-            </label>
-            <select
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-            >
-              <option value="08:00 AM - 12:00 PM">08:00 AM - 12:00 PM (Morning)</option>
-              <option value="12:00 PM - 04:00 PM">12:00 PM - 04:00 PM (Afternoon)</option>
-              <option value="04:00 PM - 07:00 PM">04:00 PM - 07:00 PM (Evening)</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg"
-            >
-              Confirm Reschedule
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function EditModal({
-  isOpen,
-  currentDescription,
-  currentLocation,
-  onClose,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  currentDescription: string;
-  currentLocation: string;
-  onClose: () => void;
-  onSubmit: (desc: string, loc: string) => void;
-}) {
-  const [desc, setDesc] = useState(currentDescription);
-  const [loc, setLoc] = useState(currentLocation);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-base font-bold text-gray-900">Edit Delivery Details</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full text-gray-400"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit(desc, loc);
-          }}
-          className="p-6 space-y-4"
-        >
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              Load Description
-            </label>
-            <input
-              type="text"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              Site Delivery Location
-            </label>
-            <input
-              type="text"
-              value={loc}
-              onChange={(e) => setLoc(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-            />
-          </div>
-          <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg"
-            >
-              Save Changes
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
