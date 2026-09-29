@@ -1,110 +1,52 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Eye, ArrowDown, FileText, Upload, X, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  Eye,
+  ArrowDown,
+  FileText,
+  Upload,
+  X,
+  Check,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getProjectDetailsApi, getProjectDrawingsApi } from "@/api/projects.api";
 import filePdfIcon from "@/assets/pdficon.svg";
+import {
+  type DrawingStatusType,
+  statusStyles,
+  normalizeDrawingStatus,
+  formatDateTime,
+  isImageFile,
+  downloadFile,
+} from "@/utils/drawings.utils";
 
-interface DrawingItem {
+export interface DrawingItem {
   id: string;
   name: string;
   version: string;
-  status: "Pending Review" | "Approved" | "Revision Required" | "Rejected";
+  versionNumber: number;
+  status: DrawingStatusType;
+  rawStatus: string;
+  rejectionReason?: string;
   fileUrl: string;
   thumbnailUrl?: string;
   uploadedAt: string;
+  reviewedAt?: string;
   uploadedBy?: string;
   location?: string;
   type: "drawing" | "photo";
 }
 
-interface BuildingDrawingGroup {
+export interface BuildingDrawingGroup {
   buildingId: string;
   buildingNumber: number;
-  status: string;
+  status: DrawingStatusType;
   drawings: DrawingItem[];
 }
-
-const statusStyles: Record<string, { bg: string; text: string; border: string }> = {
-  "Pending Review": { bg: "bg-[#FEFAE2]", text: "text-[#D97706]", border: "border-[#FEF08A]" },
-  "Approved": { bg: "bg-[#DCFCE7]", text: "text-[#16A34A]", border: "border-[#BBF7D0]" },
-  "Revision Required": { bg: "bg-[#FFF7ED]", text: "text-[#EA580C]", border: "border-[#FFEDD5]" },
-  "Rejected": { bg: "bg-[#FEE2E2]", text: "text-[#DC2626]", border: "border-[#FECACA]" },
-};
-
-const DEFAULT_BUILDINGS: BuildingDrawingGroup[] = [
-  {
-    buildingId: "bldg-1",
-    buildingNumber: 1,
-    status: "Approved",
-    drawings: [
-      {
-        id: "d1",
-        name: "Structural_Framing_Plan_B1.pdf",
-        version: "Version 2",
-        status: "Approved",
-        fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-        uploadedAt: "2026-09-15",
-        uploadedBy: "John Doe",
-        location: "Pune, Main Yard",
-        type: "drawing",
-      },
-      {
-        id: "d2",
-        name: "Roof_Truss_Layout_Rev3.pdf",
-        version: "Version 3",
-        status: "Pending Review",
-        fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-        uploadedAt: "2026-09-20",
-        uploadedBy: "Alex Smith",
-        location: "Pune, Site A",
-        type: "drawing",
-      },
-      {
-        id: "p1",
-        name: "Foundation_Pour_Inspection.jpg",
-        version: "Version 1",
-        status: "Approved",
-        fileUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb18615f3?w=800&auto=format&fit=crop&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb18615f3?w=160&auto=format&fit=crop&q=80",
-        uploadedAt: "2026-09-18",
-        uploadedBy: "Site Supervisor",
-        location: "Building 1 Pad",
-        type: "photo",
-      },
-    ],
-  },
-  {
-    buildingId: "bldg-2",
-    buildingNumber: 2,
-    status: "Revision Required",
-    drawings: [
-      {
-        id: "d3",
-        name: "Column_Anchor_Details_B2.pdf",
-        version: "Version 1",
-        status: "Revision Required",
-        fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-        uploadedAt: "2026-09-10",
-        uploadedBy: "Structural Engineer",
-        location: "Pune, North Wing",
-        type: "drawing",
-      },
-      {
-        id: "p2",
-        name: "Erection_Progress_West_Elevation.jpg",
-        version: "Version 2",
-        status: "Approved",
-        fileUrl: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=160&auto=format&fit=crop&q=80",
-        uploadedAt: "2026-09-22",
-        uploadedBy: "QA Team",
-        location: "Building 2 Grid",
-        type: "photo",
-      },
-    ],
-  },
-];
 
 export default function ProjectDrawingsPage() {
   const navigate = useNavigate();
@@ -120,7 +62,7 @@ export default function ProjectDrawingsPage() {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
 
   // Local state to store uploaded drawings on the fly
-  const [localBuildings, setLocalBuildings] = useState<BuildingDrawingGroup[]>(DEFAULT_BUILDINGS);
+  const [localBuildings, setLocalBuildings] = useState<BuildingDrawingGroup[]>([]);
 
   // Fetch project details
   const { data: projectRes } = useQuery({
@@ -130,7 +72,7 @@ export default function ProjectDrawingsPage() {
   });
 
   // Fetch drawings from API
-  const { data: drawingsRes } = useQuery({
+  const { data: drawingsRes, isLoading: isDrawingsLoading } = useQuery({
     queryKey: ["project-drawings", projectId],
     queryFn: () => getProjectDrawingsApi(projectId),
     enabled: Boolean(projectId),
@@ -140,27 +82,35 @@ export default function ProjectDrawingsPage() {
   const projectData = projectRes?.data?.data?.project;
   const projectName = projectData?.projectName || projectData?.jobId || "Project";
 
-  // Merge API data if returned
+  // Merge API data with local uploads
   const allBuildings = useMemo(() => {
-    const apiBuildingsData = (drawingsRes?.data?.data as any)?.buildings;
-    if (Array.isArray(apiBuildingsData) && apiBuildingsData.length > 0) {
-      return apiBuildingsData.map((b: any) => ({
+    const apiBuildingsData = drawingsRes?.data?.data?.buildings;
+    if (Array.isArray(apiBuildingsData)) {
+      if (apiBuildingsData.length === 0 && localBuildings.length > 0) {
+        return localBuildings;
+      }
+      return apiBuildingsData.map((b) => ({
         buildingId: b.buildingId || `bldg-${b.buildingNumber}`,
         buildingNumber: b.buildingNumber || 1,
-        status: b.latestDrawingStatus || "Approved",
-        drawings: (b.drawings || []).map((d: any) => {
-          const isPhoto = /\.(jpg|jpeg|png|webp|gif)$/i.test(d.fileName || "");
+        status: normalizeDrawingStatus(b.latestDrawingStatus),
+        drawings: (b.drawings || []).map((d) => {
+          const isImg = isImageFile(d.fileName);
+          const normStatus = normalizeDrawingStatus(d.status);
           return {
             id: d._id || d.fileUrl,
             name: d.fileName || "Drawing",
-            version: `Version ${d.versionNumber || 1}`,
-            status: d.status || "Approved",
+            version: `Version ${d.versionNumber ?? 1}`,
+            versionNumber: d.versionNumber ?? 1,
+            status: normStatus,
+            rawStatus: d.status,
+            rejectionReason: d.rejectionReason || "",
             fileUrl: d.fileUrl || "",
-            thumbnailUrl: isPhoto ? d.fileUrl : undefined,
-            uploadedAt: d.uploadedAt || new Date().toISOString(),
+            thumbnailUrl: isImg ? d.fileUrl : undefined,
+            uploadedAt: d.uploadedAt || "",
+            reviewedAt: d.reviewedAt || "",
             uploadedBy: d.uploadedBy || "Engineer",
             location: projectData?.location || "Site Yard",
-            type: isPhoto ? ("photo" as const) : ("drawing" as const),
+            type: "drawing" as const,
           };
         }),
       }));
@@ -168,19 +118,14 @@ export default function ProjectDrawingsPage() {
     return localBuildings;
   }, [drawingsRes, localBuildings, projectData]);
 
+  const availableBuildingNumbers = useMemo(() => {
+    const set = new Set(allBuildings.map((b) => b.buildingNumber));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [allBuildings]);
+
   const handleOpenDrawing = (item: DrawingItem) => {
     setSelectedDrawing(item);
     setIsViewModalOpen(true);
-  };
-
-  const handleDownloadFile = (fileUrl: string, name: string) => {
-    const link = document.createElement("a");
-    link.href = fileUrl;
-    link.download = name;
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleUploadSubmit = (buildingNumber: number, file: File, type: "drawing" | "photo") => {
@@ -188,10 +133,12 @@ export default function ProjectDrawingsPage() {
       id: crypto.randomUUID(),
       name: file.name,
       version: "Version 1",
+      versionNumber: 1,
       status: "Pending Review",
+      rawStatus: "pending_review",
       fileUrl: URL.createObjectURL(file),
-      thumbnailUrl: type === "photo" ? URL.createObjectURL(file) : undefined,
-      uploadedAt: new Date().toISOString().split("T")[0],
+      thumbnailUrl: isImageFile(file.name) ? URL.createObjectURL(file) : undefined,
+      uploadedAt: new Date().toISOString(),
       uploadedBy: "Current User",
       location: projectData?.location || "Main Site",
       type,
@@ -288,190 +235,246 @@ export default function ProjectDrawingsPage() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {isDrawingsLoading && (
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100 shadow-xs">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+          <p className="text-sm font-medium text-gray-600">Loading building drawings...</p>
+        </div>
+      )}
+
+      {/* Empty State when no buildings */}
+      {!isDrawingsLoading && allBuildings.length === 0 && (
+        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-200 shadow-xs space-y-3">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto" />
+          <h3 className="text-base font-bold text-gray-800">No Drawings Found</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+            No building drawings or photos have been uploaded for this project yet.
+          </p>
+        </div>
+      )}
+
       {/* Buildings Sections */}
-      <div className="space-y-6">
-        {allBuildings.map((building) => {
-          const filteredDrawings = building.drawings.filter((d: DrawingItem) => {
-            const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesFilter = activeFilter === "all" || d.status === activeFilter;
-            return matchesSearch && matchesFilter;
-          });
+      {!isDrawingsLoading && (
+        <div className="space-y-6">
+          {allBuildings.map((building) => {
+            const filteredDrawings = building.drawings.filter((d: DrawingItem) => {
+              const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
+              const matchesFilter = activeFilter === "all" || d.status === activeFilter;
+              return matchesSearch && matchesFilter;
+            });
 
-          const drawingsList = filteredDrawings.filter((d: DrawingItem) => d.type === "drawing");
-          const photosList = filteredDrawings.filter((d: DrawingItem) => d.type === "photo");
+            const drawingsList = filteredDrawings.filter((d: DrawingItem) => d.type === "drawing");
+            const photosList = filteredDrawings.filter((d: DrawingItem) => d.type === "photo");
 
-          const overallBadge = statusStyles[building.status] || {
-            bg: "bg-gray-100",
-            text: "text-gray-700",
-            border: "border-gray-200",
-          };
+            const overallBadge = statusStyles[building.status] || {
+              bg: "bg-gray-100",
+              text: "text-gray-700",
+              border: "border-gray-200",
+            };
 
-          return (
-            <div
-              key={building.buildingId}
-              className="bg-white border border-gray-100 rounded-xl p-5 sm:p-6 shadow-xs space-y-5"
-            >
-              {/* Building Header */}
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-gray-900">
-                    Building {building.buildingNumber}
-                  </h3>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${overallBadge.bg} ${overallBadge.text} ${overallBadge.border}`}
-                  >
-                    {building.status}
+            return (
+              <div
+                key={building.buildingId}
+                className="bg-white border border-gray-100 rounded-xl p-5 sm:p-6 shadow-xs space-y-5"
+              >
+                {/* Building Header */}
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Building {building.buildingNumber}
+                    </h3>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${overallBadge.bg} ${overallBadge.text} ${overallBadge.border}`}
+                    >
+                      {building.status}
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-400 font-medium">
+                    {building.drawings.length} total {building.drawings.length === 1 ? "file" : "files"}
                   </span>
                 </div>
-                <span className="text-xs text-gray-400 font-medium">
-                  {building.drawings.length} total files
-                </span>
+
+                {filteredDrawings.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-400 bg-gray-50/50 rounded-lg border border-dashed border-gray-200">
+                    No drawings match the current filter.
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Drawings Subsection */}
+                    {drawingsList.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                          Drawings ({drawingsList.length})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {drawingsList.map((file: DrawingItem) => {
+                            const badge = statusStyles[file.status] || {
+                              bg: "bg-gray-100",
+                              text: "text-gray-600",
+                              border: "border-gray-200",
+                            };
+                            return (
+                              <div
+                                key={file.id}
+                                className="bg-white border border-gray-200/80 rounded-xl p-3.5 shadow-xs relative hover:border-blue-200 transition-all flex flex-col justify-between"
+                              >
+                                {/* Floating status pill */}
+                                <div className="absolute -top-2.5 right-3 z-10">
+                                  <span
+                                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
+                                  >
+                                    {file.status}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-3.5">
+                                  {file.thumbnailUrl ? (
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0 bg-gray-100">
+                                      <img
+                                        src={file.thumbnailUrl}
+                                        alt={file.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-12 h-12 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+                                      <img src={filePdfIcon} alt="PDF" className="w-6 h-6" />
+                                    </div>
+                                  )}
+
+                                  <div className="flex-1 min-w-0 pr-1">
+                                    <h5 className="text-sm font-bold text-gray-900 truncate" title={file.name}>
+                                      {file.name}
+                                    </h5>
+                                    <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                                      {file.version}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => downloadFile(file.fileUrl, file.name)}
+                                      className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors cursor-pointer"
+                                      title="Download"
+                                    >
+                                      <ArrowDown className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenDrawing(file)}
+                                      className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-full transition-colors cursor-pointer"
+                                      title="View"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Rejection reason pill if rejected */}
+                                {file.status === "Rejected" && file.rejectionReason && (
+                                  <div
+                                    className="mt-2.5 pt-2 border-t border-red-100 flex items-center gap-1.5 text-[11px] text-red-600 font-medium"
+                                    title={file.rejectionReason}
+                                  >
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                                    <span className="truncate">Reason: {file.rejectionReason}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Photos Subsection (if any uploaded as photos) */}
+                    {photosList.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                          Photos ({photosList.length})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {photosList.map((file: DrawingItem) => {
+                            const badge = statusStyles[file.status] || {
+                              bg: "bg-gray-100",
+                              text: "text-gray-600",
+                              border: "border-gray-200",
+                            };
+                            return (
+                              <div
+                                key={file.id}
+                                className="bg-white border border-gray-200/80 rounded-xl p-3.5 shadow-xs relative hover:border-blue-200 transition-all flex flex-col justify-between"
+                              >
+                                <div className="absolute -top-2.5 right-3 z-10">
+                                  <span
+                                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
+                                  >
+                                    {file.status}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-3.5">
+                                  <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 shrink-0 bg-gray-100">
+                                    <img
+                                      src={file.thumbnailUrl || file.fileUrl}
+                                      alt={file.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+
+                                  <div className="flex-1 min-w-0 pr-1">
+                                    <h5 className="text-sm font-bold text-gray-900 truncate" title={file.name}>
+                                      {file.name}
+                                    </h5>
+                                    <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                                      {file.version}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => downloadFile(file.fileUrl, file.name)}
+                                      className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors cursor-pointer"
+                                      title="Download"
+                                    >
+                                      <ArrowDown className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenDrawing(file)}
+                                      className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-full transition-colors cursor-pointer"
+                                      title="View"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {file.status === "Rejected" && file.rejectionReason && (
+                                  <div
+                                    className="mt-2.5 pt-2 border-t border-red-100 flex items-center gap-1.5 text-[11px] text-red-600 font-medium"
+                                    title={file.rejectionReason}
+                                  >
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                                    <span className="truncate">Reason: {file.rejectionReason}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {filteredDrawings.length === 0 ? (
-                <div className="text-center py-8 text-sm text-gray-400 bg-gray-50/50 rounded-lg border border-dashed border-gray-200">
-                  No drawings or photos match the current filter.
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Drawings Subsection */}
-                  {drawingsList.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Drawings ({drawingsList.length})
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {drawingsList.map((file: DrawingItem) => {
-                          const badge = statusStyles[file.status] || {
-                            bg: "bg-gray-100",
-                            text: "text-gray-600",
-                            border: "border-gray-200",
-                          };
-                          return (
-                            <div
-                              key={file.id}
-                              className="bg-white border border-gray-200/80 rounded-xl p-3.5 shadow-xs relative hover:border-blue-200 transition-all flex items-center gap-3.5"
-                            >
-                              {/* Floating status pill */}
-                              <div className="absolute -top-2.5 right-3 z-10">
-                                <span
-                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
-                                >
-                                  {file.status}
-                                </span>
-                              </div>
-
-                              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                                <img src={filePdfIcon} alt="PDF" className="w-5 h-5" />
-                              </div>
-
-                              <div className="flex-1 min-w-0 pr-1">
-                                <h5 className="text-sm font-bold text-gray-900 truncate" title={file.name}>
-                                  {file.name}
-                                </h5>
-                                <p className="text-xs text-gray-500 mt-0.5 font-medium">
-                                  {file.version}
-                                </p>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadFile(file.fileUrl, file.name)}
-                                  className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors cursor-pointer"
-                                  title="Download"
-                                >
-                                  <ArrowDown className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenDrawing(file)}
-                                  className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-full transition-colors cursor-pointer"
-                                  title="View"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Photos Subsection */}
-                  {photosList.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Photos ({photosList.length})
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {photosList.map((file: DrawingItem) => {
-                          const badge = statusStyles[file.status] || {
-                            bg: "bg-gray-100",
-                            text: "text-gray-600",
-                            border: "border-gray-200",
-                          };
-                          return (
-                            <div
-                              key={file.id}
-                              className="bg-white border border-gray-200/80 rounded-xl p-3.5 shadow-xs relative hover:border-blue-200 transition-all flex items-center gap-3.5"
-                            >
-                              <div className="absolute -top-2.5 right-3 z-10">
-                                <span
-                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
-                                >
-                                  {file.status}
-                                </span>
-                              </div>
-
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 shrink-0 bg-gray-100">
-                                <img
-                                  src={file.thumbnailUrl || file.fileUrl}
-                                  alt={file.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-
-                              <div className="flex-1 min-w-0 pr-1">
-                                <h5 className="text-sm font-bold text-gray-900 truncate" title={file.name}>
-                                  {file.name}
-                                </h5>
-                                <p className="text-xs text-gray-500 mt-0.5 font-medium">
-                                  {file.version}
-                                </p>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadFile(file.fileUrl, file.name)}
-                                  className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors cursor-pointer"
-                                  title="Download"
-                                >
-                                  <ArrowDown className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenDrawing(file)}
-                                  className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-full transition-colors cursor-pointer"
-                                  title="View"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* View Drawing Modal */}
       {isViewModalOpen && selectedDrawing && (
@@ -480,27 +483,65 @@ export default function ProjectDrawingsPage() {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-gray-900">{selectedDrawing.name}</h3>
-                <div className="flex items-center gap-4 text-xs text-gray-500 font-medium">
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-lg font-bold text-gray-900">{selectedDrawing.name}</h3>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                      statusStyles[selectedDrawing.status]?.bg || "bg-gray-100"
+                    } ${statusStyles[selectedDrawing.status]?.text || "text-gray-700"} ${
+                      statusStyles[selectedDrawing.status]?.border || "border-gray-200"
+                    }`}
+                  >
+                    {selectedDrawing.status}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 font-medium">
+                  <span className="font-semibold text-gray-700">{selectedDrawing.version}</span>
+                  <span>•</span>
                   <span>Location: {selectedDrawing.location || "Site Yard"}</span>
                   <span>•</span>
-                  <span>Uploaded: {selectedDrawing.uploadedAt}</span>
-                  <span>•</span>
-                  <span>By: {selectedDrawing.uploadedBy || "Engineer"}</span>
+                  <span>Uploaded: {formatDateTime(selectedDrawing.uploadedAt)}</span>
+                  {selectedDrawing.reviewedAt && (
+                    <>
+                      <span>•</span>
+                      <span>Reviewed: {formatDateTime(selectedDrawing.reviewedAt)}</span>
+                    </>
+                  )}
+                  {selectedDrawing.uploadedBy && (
+                    <>
+                      <span>•</span>
+                      <span>By ID: {selectedDrawing.uploadedBy}</span>
+                    </>
+                  )}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsViewModalOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Rejection Note inside Modal if Rejected */}
+            {selectedDrawing.status === "Rejected" && selectedDrawing.rejectionReason && (
+              <div className="mx-6 mt-4 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <h5 className="text-xs font-bold text-red-800">Drawing Rejected</h5>
+                  <p className="text-xs text-red-700 mt-0.5 font-medium">
+                    Reason: {selectedDrawing.rejectionReason}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Modal Body Preview */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#F8FAFC] flex items-center justify-center min-h-[350px]">
-              {selectedDrawing.type === "photo" ? (
+              {selectedDrawing.thumbnailUrl ||
+              selectedDrawing.type === "photo" ||
+              isImageFile(selectedDrawing.fileUrl || selectedDrawing.name) ? (
                 <img
                   src={selectedDrawing.fileUrl}
                   alt={selectedDrawing.name}
@@ -515,8 +556,8 @@ export default function ProjectDrawingsPage() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => handleDownloadFile(selectedDrawing.fileUrl, selectedDrawing.name)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+                    onClick={() => downloadFile(selectedDrawing.fileUrl, selectedDrawing.name)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
                   >
                     <ArrowDown className="w-4 h-4" />
                     <span>Download Full PDF</span>
@@ -529,27 +570,18 @@ export default function ProjectDrawingsPage() {
             <div className="px-6 py-4 border-t border-gray-100 bg-white flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={() => handleDownloadFile(selectedDrawing.fileUrl, selectedDrawing.name)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-lg transition-colors"
+                onClick={() => downloadFile(selectedDrawing.fileUrl, selectedDrawing.name)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 <ArrowDown className="w-4 h-4" />
                 <span>Download File</span>
               </button>
 
               <div className="flex items-center gap-2 ml-auto">
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                    statusStyles[selectedDrawing.status]?.bg || "bg-gray-100"
-                  } ${statusStyles[selectedDrawing.status]?.text || "text-gray-700"} ${
-                    statusStyles[selectedDrawing.status]?.border || "border-gray-200"
-                  }`}
-                >
-                  Status: {selectedDrawing.status}
-                </span>
                 <button
                   type="button"
                   onClick={() => setIsViewModalOpen(false)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg"
+                  className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-semibold rounded-lg cursor-pointer"
                 >
                   Close
                 </button>
@@ -565,6 +597,7 @@ export default function ProjectDrawingsPage() {
           isOpen={isUploadModalOpen}
           onClose={() => setIsUploadModalOpen(false)}
           onSubmit={handleUploadSubmit}
+          availableBuildings={availableBuildingNumbers}
         />
       )}
 
@@ -576,7 +609,7 @@ export default function ProjectDrawingsPage() {
           <button
             type="button"
             onClick={() => setIsSuccessOpen(false)}
-            className="p-1 hover:bg-emerald-700 rounded-full"
+            className="p-1 hover:bg-emerald-700 rounded-full cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -590,12 +623,15 @@ function UploadDrawingModal({
   isOpen,
   onClose,
   onSubmit,
+  availableBuildings = [1, 2],
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (buildingNumber: number, file: File, type: "drawing" | "photo") => void;
+  availableBuildings?: number[];
 }) {
-  const [buildingNumber, setBuildingNumber] = useState<number>(1);
+  const buildingOptions = availableBuildings.length > 0 ? availableBuildings : [1];
+  const [buildingNumber, setBuildingNumber] = useState<number>(buildingOptions[0]);
   const [fileType, setFileType] = useState<"drawing" | "photo">("drawing");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -615,7 +651,7 @@ function UploadDrawingModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400"
+            className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -631,9 +667,14 @@ function UploadDrawingModal({
               onChange={(e) => setBuildingNumber(Number(e.target.value))}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
-              <option value={1}>Building 1</option>
-              <option value={2}>Building 2</option>
-              <option value={3}>Building 3</option>
+              {buildingOptions.map((num) => (
+                <option key={num} value={num}>
+                  Building {num}
+                </option>
+              ))}
+              <option value={Math.max(...buildingOptions, 0) + 1}>
+                New Building {Math.max(...buildingOptions, 0) + 1}
+              </option>
             </select>
           </div>
 
@@ -651,7 +692,7 @@ function UploadDrawingModal({
                     : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                 }`}
               >
-                Drawing (PDF)
+                Drawing (PDF/PNG)
               </button>
               <button
                 type="button"
@@ -673,7 +714,7 @@ function UploadDrawingModal({
             </label>
             <input
               type="file"
-              accept={fileType === "drawing" ? ".pdf" : "image/*"}
+              accept={fileType === "drawing" ? ".pdf,image/*" : "image/*"}
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
                   setSelectedFile(e.target.files[0]);
@@ -688,14 +729,14 @@ function UploadDrawingModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!selectedFile}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
             >
               Upload Now
             </button>
