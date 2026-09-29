@@ -128,7 +128,7 @@ export default function Projects() {
 
   const handleViewProject = (project: Project) => {
     const targetId = project._id || project.leadId;
-    navigate(`/project-view-page?id=${targetId}`, {
+    navigate(`/projects/${targetId}`, {
       state: {
         projectId: targetId,
         projectCode: project.jobId,
