@@ -195,24 +195,35 @@ export interface DeliverySchedule {
 }
 
 export interface DeliveryCarrier {
-  phone: string;
-  email: string;
-  truckNumber: string;
-  driverName: string;
-  driverPhone: string;
+  phone?: string;
+  email?: string;
+  truckNumber?: string;
+  driverName?: string;
+  driverPhone?: string;
 }
 
 export interface DeliveryProject {
-  leadId: string;
-  projectName: string;
-  jobId: string;
-  location: string;
+  leadId?: string;
+  projectName?: string;
+  jobId?: string;
+  location?: string;
+}
+
+export interface DeliverySiteContact {
+  contactName?: string;
+  contactTitle?: string;
+  phone?: string;
+  email?: string;
+  availableHours?: string;
+  notes?: string;
 }
 
 export interface DeliveryStatusHistoryItem {
   _id?: string;
   status: string;
   changedAt: string;
+  changedBy?: string | null;
+  description?: string;
 }
 
 export interface ConstructionDelivery {
@@ -232,8 +243,9 @@ export interface ConstructionDelivery {
   notes: string;
   receivingPoc: string;
   pickupContactPhone: string;
+  siteContact?: DeliverySiteContact | null;
   carrier: DeliveryCarrier | null;
-  project: DeliveryProject;
+  project?: DeliveryProject | null;
 }
 
 export interface DeliveriesStats {
@@ -884,6 +896,81 @@ export interface DashboardApiResponse {
   success: boolean;
   message: string;
   data: DashboardResponseData;
+}
+
+export interface ConsolidatedBOMItem {
+  _id: string;
+  partCode: string | null;
+  partColor: string | null;
+  description: string;
+  category: string;
+  costUnit: string | null;
+  totalQty: number;
+  totalLengthFeet: number;
+  totalWeight: number;
+  totalCost: number;
+  buildings: number[];
+  markIds: string[];
+}
+
+export interface ConsolidatedBOM {
+  _id: string;
+  leadId: string;
+  status: string;
+  fileUrl?: string;
+  totalCost: number;
+  totalWeight: number;
+  totalPanelsArea: number;
+  itemCount: number;
+  items: ConsolidatedBOMItem[];
+  sentToVendors?: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConsolidatedBOMApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    consolidatedBOM: ConsolidatedBOM;
+  };
+}
+
+export interface DrawingCommentItem {
+  _id?: string;
+  user?: string;
+  comment?: string;
+  createdAt?: string;
+}
+
+export interface BuildingDrawingFile {
+  _id: string;
+  versionNumber: number;
+  fileUrl: string;
+  fileName: string;
+  status: string;
+  rejectionReason?: string;
+  uploadedBy?: string;
+  uploadedAt: string;
+  reviewedAt?: string;
+  comments?: DrawingCommentItem[];
+}
+
+export interface BuildingDrawingGroupData {
+  buildingId: string;
+  buildingNumber: number;
+  drawings: BuildingDrawingFile[];
+  latestDrawingStatus: string;
+}
+
+export interface BuildingDrawingsResponseData {
+  buildings: BuildingDrawingGroupData[];
+}
+
+export interface BuildingDrawingsApiResponse {
+  success: boolean;
+  message: string;
+  data: BuildingDrawingsResponseData;
 }
 
 
