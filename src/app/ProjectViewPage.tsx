@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getProjectDetailsApi } from "@/api/projects.api";
+import { getProjectDetailsApi, scanBundleScanApi } from "@/api/projects.api";
 import {
   ProjectDetailsHeader,
   ProjectDetailsNavButtons,
@@ -13,17 +13,19 @@ import {
   type ProjectTaskItem,
 } from "@/components/projects/details";
 import { AlertCircle, RefreshCw, ArrowLeft } from "lucide-react";
+import ScanQRCodeModal from "@/components/common/ScanQRCodeModal";
+import BundleDetailsModal from "@/components/common/BundleDetailsModal";
 
 export default function ProjectViewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const routeParams = useParams<{ id?: string }>();
+  const { id } = useParams<{ id?: string }>();
 
-  // Extract project ID from query params, route params, or navigation state
+  // Extract project ID from route param (/projects/:id), query params, or navigation state
   const projectId =
+    id ||
     searchParams.get("id") ||
-    routeParams.id ||
     location.state?.projectId ||
     "";
 
@@ -141,6 +143,11 @@ export default function ProjectViewPage() {
       };
     });
   }, [apiData?.tasks]);
+
+  // Bundle scan flow states
+  const [scanOpen, setScanOpen] = useState(false);
+  const [resultOpen, setResultOpen] = useState(false);
+  const [selectedBundleId, setSelectedBundleId] = useState("");
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -268,7 +275,7 @@ export default function ProjectViewPage() {
         onViewBOM={() => navigate(`/projects/${projectId}/view-bom`)}
         onViewDrawings={() => navigate(`/projects/${projectId}/view-drawings`)}
         onMaterialDelivery={() => navigate(`/projects/${projectId}/material-delivery`)}
-        onBundleScan={() => navigate("/delivery-tracking/bundle-scan")}
+        onBundleScan={() => setScanOpen(true)}
       />
 
       {/* 3. Project Summary Card */}
@@ -282,6 +289,30 @@ export default function ProjectViewPage() {
 
       {/* 5. Project Tasks Card (Real API data) */}
       <ProjectTasksCard tasks={tasks} />
+
+      {/* 6. Bundle Scan Flow Modals */}
+      <ScanQRCodeModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        projectId={project?._id || projectId}
+        leadId={project?.leadId}
+        scanApiFn={scanBundleScanApi}
+        onScanSuccess={(bundleId) => {
+          setSelectedBundleId(bundleId);
+          setResultOpen(true);
+          refetch();
+        }}
+      />
+
+      <BundleDetailsModal
+        open={resultOpen}
+        onClose={() => setResultOpen(false)}
+        bundleId={selectedBundleId}
+        onBack={() => {
+          setResultOpen(false);
+          setScanOpen(true);
+        }}
+      />
     </div>
   );
 }
