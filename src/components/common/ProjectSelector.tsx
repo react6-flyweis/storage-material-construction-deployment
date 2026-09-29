@@ -24,6 +24,9 @@ export default function ProjectSelector({
 
   const projects = data?.data?.data?.projects || [];
 
+  const effectiveValue =
+    projects.find((p) => p._id === value || (p.leadId && p.leadId === value))?._id || value;
+
   const options = projects.map((proj) => ({
     label: proj.projectName || `${proj.buildingType || "Project"} - ${proj.location || "Site"} (${proj.jobId})`,
     value: proj._id,
@@ -37,7 +40,7 @@ export default function ProjectSelector({
     <CustomSelect
       title="Select Project"
       options={options}
-      value={value}
+      value={effectiveValue}
       onChange={onChange}
       width={width}
       searchable
