@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { Search, ChevronDown, Download, ArrowUpDown, Tag } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search, ChevronDown, Download, ArrowUpDown, Tag, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getLabelsApi } from "../api/projects.api";
+import { getLabelsApi, exportLabelsApi } from "../api/projects.api";
+import { downloadFileFromResponse } from "../lib/downloadUtils";
 import CustomSelect from "../components/common/CustomSelect";
 import toast from "react-hot-toast";
 import QRCodeDataModal from "../components/common/QRCodeDataModal";
@@ -48,6 +49,7 @@ export default function LabelPrinting() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [selectedQRData, setSelectedQRData] = useState<QRModalData | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
 
   useEffect(() => {
@@ -77,8 +79,65 @@ export default function LabelPrinting() {
   const bundles = apiData?.bundles || [];
   const total = apiData?.total || 0;
   const apiStats = apiData?.stats;
+  const enums = apiData?.enums;
 
   const totalPages = Math.ceil(total / limit) || 1;
+
+  // Build status options from enums or defaults
+  const statusOptions = useMemo(() => {
+    if (enums?.labelStatus || enums?.bundleStatus) {
+      const opts = [{ label: "All Statuses", value: "" }];
+      if (enums.labelStatus) {
+        enums.labelStatus.forEach((s) => {
+          opts.push({ label: formatStatus(s), value: s });
+        });
+      }
+      if (enums.bundleStatus) {
+        enums.bundleStatus.forEach((s) => {
+          if (!opts.some((o) => o.value === s)) {
+            opts.push({ label: formatStatus(s), value: s });
+          }
+        });
+      }
+      return opts;
+    }
+    return [
+      { label: "All Statuses", value: "" },
+      { label: "Pending (Not Printed)", value: "pending" },
+      { label: "Printed", value: "printed" },
+      { label: "Draft", value: "draft" },
+      { label: "Confirmed", value: "confirmed" },
+      { label: "Assigned to Truck", value: "assigned_to_truck" },
+      { label: "Staged", value: "staged" },
+      { label: "Loaded", value: "loaded" },
+    ];
+  }, [enums]);
+
+  // Build sort options from enums or defaults
+  const sortOptions = useMemo(() => {
+    const rawSorts = enums?.sortBy || ["Latest", "Oldest", "Weight", "BundleNo"];
+    return rawSorts.map((s) => ({ label: s, value: s }));
+  }, [enums?.sortBy]);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const res = await exportLabelsApi({
+        page,
+        limit,
+        search: debouncedSearch || undefined,
+        sortBy: sortBy || undefined,
+        status: statusFilter || undefined,
+      });
+      downloadFileFromResponse(res, "bundle-labels.xlsx");
+      toast.success("Labels exported successfully");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(errorMsg || "Failed to export labels");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const stats = [
     { title: "Total Bundles", value: apiStats?.totalBundles ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
@@ -115,10 +174,11 @@ export default function LabelPrinting() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <button
-
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50"
           >
-            <Download className="w-4 h-4" />
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Export
           </button>
           <button
@@ -172,21 +232,16 @@ export default function LabelPrinting() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <CustomSelect
             title="Filter by Status"
-            options={[
-              { label: "All Statuses", value: "" },
-              { label: "Pending", value: "pending" },
-              { label: "Assigned to Truck", value: "assigned_to_truck" },
-              { label: "Dispatched", value: "dispatched" },
-            ]}
+            options={statusOptions}
             value={statusFilter}
             onChange={(val) => {
               setStatusFilter(val);
               setPage(1);
             }}
-            width="180px"
+            width="200px"
           />
 
-          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px]">
+          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px] min-w-[150px]">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort by :</span>
             <select
               value={sortBy}
@@ -194,11 +249,13 @@ export default function LabelPrinting() {
                 setSortBy(e.target.value);
                 setPage(1);
               }}
-              className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-6 outline-none cursor-pointer"
+              className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-6 outline-none cursor-pointer w-full"
             >
-              <option value="Latest">Latest</option>
-              <option value="Oldest">Oldest</option>
-              <option value="Weight">Weight</option>
+              {sortOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-3 h-3 text-gray-900 absolute right-4 pointer-events-none" />
           </div>

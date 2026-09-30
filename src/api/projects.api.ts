@@ -1,5 +1,46 @@
+import type { AxiosError } from "axios";
 import { axiosInstance } from "./axiosInstance";
-import type { ProjectsApiResponse, ProjectDetailsApiResponse, CalendarApiResponse, DrawingsApiResponse, TasksApiResponse, DeliveriesApiResponse, DeliveryDetailsApiResponse, LabelsApiResponse, LabelsQueryParams, BundleScanApiResponse, BundleScanQueryParams, PackingListApiResponse, PackingListsQueryParams, PackingListDetailApiResponse, DispatchVerificationApiResponse, DispatchVerificationDetailApiResponse, DispatchVerificationQueryParams, MaterialRequestsApiResponse, MaterialRequestsQueryParams, MaterialRequestsFiltersApiResponse, MaterialRequest, BundleDetailsApiResponse, DashboardApiResponse, DashboardFiltersApiResponse, DashboardQueryParams, ConsolidatedBOMApiResponse, BuildingDrawingsApiResponse } from "../types/projects.types";
+import type {
+  ProjectsApiResponse,
+  ProjectDetailsApiResponse,
+  CalendarApiResponse,
+  DrawingsApiResponse,
+  TasksApiResponse,
+  DeliveriesApiResponse,
+  DeliveriesQueryParams,
+  DeliveryFiltersApiResponse,
+  DeliveryDetailsApiResponse,
+  LabelsApiResponse,
+  LabelsQueryParams,
+  BundleScanApiResponse,
+  BundleScanQueryParams,
+  PackingListApiResponse,
+  PackingListsQueryParams,
+  PackingListDetailApiResponse,
+  DispatchVerificationApiResponse,
+  DispatchVerificationDetailApiResponse,
+  DispatchVerificationQueryParams,
+  MaterialRequestsApiResponse,
+  MaterialRequestsQueryParams,
+  MaterialRequestsFiltersApiResponse,
+  MaterialRequest,
+  BundleDetailsApiResponse,
+  DashboardApiResponse,
+  DashboardFiltersApiResponse,
+  DashboardQueryParams,
+  ConsolidatedBOMApiResponse,
+  BuildingDrawingsApiResponse,
+  PresignedUrlPayload,
+  PresignedUrlApiResponse,
+  AttachMediaPayload,
+  AttachMediaApiResponse,
+  ConstructionMediaQueryParams,
+  ConstructionMediaApiResponse,
+  ConstructionMediaProject,
+  MediaDocument,
+  CreateDeliveryPayload,
+  CreateDeliveryApiResponse,
+} from "../types/projects.types";
 
 export interface ProjectsQueryParams {
   page?: number;
@@ -32,13 +73,140 @@ export const getDrawingsApi = () => {
   return axiosInstance.get<DrawingsApiResponse>("/construction/drawings");
 };
 
+export type { ConstructionMediaProject, MediaDocument };
+
+// 1. Presigned URL for media uploads (Step A)
+export const getPresignedUrlApi = async (payload: PresignedUrlPayload) => {
+  try {
+    return await axiosInstance.post<PresignedUrlApiResponse>("/common/upload/presigned-url", payload);
+  } catch (err: unknown) {
+    const axiosErr = err as AxiosError;
+    if (axiosErr?.response?.status === 404) {
+      return await axiosInstance.post<PresignedUrlApiResponse>("/upload/presigned-url", payload);
+    }
+    throw err;
+  }
+};
+
+// 2. PUT file to S3 (Step B)
+export const uploadFileToS3Direct = async (
+  uploadUrl: string,
+  file: File,
+  fileType: string,
+  onProgress?: (progress: number) => void
+): Promise<void> => {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", fileType || "application/octet-stream");
+
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          onProgress(percent);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (onProgress) onProgress(100);
+        resolve();
+      } else {
+        reject(new Error(`S3 upload failed with status ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error("Network error during S3 upload."));
+    };
+
+    xhr.send(file);
+  });
+};
+
+// 3. Attach media to lead in Construction panel (Step C)
+export const attachConstructionMediaApi = (leadId: string, payload: AttachMediaPayload) => {
+  return axiosInstance.post<AttachMediaApiResponse>(`/construction/media/${leadId}`, payload);
+};
+
+// Combined 3-step media upload flow
+export const uploadConstructionMediaFlow = async ({
+  file,
+  leadId,
+  onProgress,
+}: {
+  file: File;
+  leadId: string;
+  onProgress?: (progress: number) => void;
+}) => {
+  const isVideo = file.type.startsWith("video/") || /\.(mp4|mov|avi|webm|mkv)$/i.test(file.name);
+  const mediaType: "photo" | "video" = isVideo ? "video" : "photo";
+  const fileType = file.type || (isVideo ? "video/mp4" : "image/jpeg");
+
+  // Step A: Presigned URL
+  const presignedRes = await getPresignedUrlApi({
+    fileName: file.name,
+    fileType,
+    folder: "media",
+  });
+
+  const uploadData = presignedRes.data.data;
+  const uploadUrl = uploadData?.uploadUrl;
+  const fileUrl = uploadData?.fileUrl;
+
+  if (!uploadUrl || !fileUrl) {
+    throw new Error("Failed to obtain upload URL from server.");
+  }
+
+  // Step B: PUT file to S3
+  await uploadFileToS3Direct(uploadUrl, file, fileType, onProgress);
+
+  // Step C: Attach to lead in Construction panel
+  const attachRes = await attachConstructionMediaApi(leadId, {
+    url: fileUrl,
+    name: file.name,
+    type: mediaType,
+  });
+
+  return attachRes.data;
+};
+
+// Construction panel — list all projects + photos & videos
+export const getConstructionMediaApi = (params?: ConstructionMediaQueryParams) => {
+  return axiosInstance.get<ConstructionMediaApiResponse>("/construction/media", { params });
+};
+
+// Get one lead's photos & videos
+export const getConstructionLeadMediaApi = (leadId: string) => {
+  return axiosInstance.get<ConstructionMediaApiResponse>(`/construction/media/${leadId}`);
+};
+
 export const getTasksApi = () => {
   return axiosInstance.get<TasksApiResponse>("/construction/tasks");
 };
 
-export const getDeliveriesApi = () => {
-  return axiosInstance.get<DeliveriesApiResponse>("/construction/deliveries");
+export const getDeliveriesApi = (params?: DeliveriesQueryParams) => {
+  return axiosInstance.get<DeliveriesApiResponse>("/construction/deliveries", { params });
 };
+
+export const getDeliveryFiltersApi = () => {
+  return axiosInstance.get<DeliveryFiltersApiResponse>("/construction/deliveries/filters");
+};
+
+export const exportDeliveriesApi = (params?: DeliveriesQueryParams) => {
+  return axiosInstance.get("/construction/deliveries/export", {
+    params,
+    responseType: "blob",
+  });
+};
+
+export const createDeliveryApi = (payload: CreateDeliveryPayload) => {
+  return axiosInstance.post<CreateDeliveryApiResponse>("/construction/deliveries", payload);
+};
+
+export type { CreateDeliveryPayload, CreateDeliveryApiResponse };
 
 export const getDashboardFiltersApi = () => {
   return axiosInstance.get<DashboardFiltersApiResponse>("/construction/dashboard/filters");
@@ -119,8 +287,22 @@ export const getLabelsApi = (params?: LabelsQueryParams) => {
   return axiosInstance.get<LabelsApiResponse>("/construction/labels", { params });
 };
 
+export const exportLabelsApi = (params?: LabelsQueryParams) => {
+  return axiosInstance.get("/construction/labels/export", {
+    params,
+    responseType: "blob",
+  });
+};
+
 export const getBundleScansApi = (params?: BundleScanQueryParams) => {
   return axiosInstance.get<BundleScanApiResponse>("/construction/bundle-scan", { params });
+};
+
+export const exportBundleScanApi = (params?: BundleScanQueryParams) => {
+  return axiosInstance.get("/construction/bundle-scan/export", {
+    params,
+    responseType: "blob",
+  });
 };
 
 export const getPackingListsApi = (params?: PackingListsQueryParams) => {
@@ -131,8 +313,9 @@ export const getPackingListDetailsApi = (packingListId: string) => {
   return axiosInstance.get<PackingListDetailApiResponse>(`/construction/packing-lists/${packingListId}`);
 };
 
-export const exportPackingListsApi = () => {
+export const exportPackingListsApi = (params?: PackingListsQueryParams) => {
   return axiosInstance.get("/construction/packing-lists/export", {
+    params,
     responseType: "blob",
   });
 };
@@ -157,6 +340,13 @@ export const markPackingListDispatchApi = (packingListId: string) => {
 
 export const getDispatchVerificationApi = (params?: DispatchVerificationQueryParams) => {
   return axiosInstance.get<DispatchVerificationApiResponse>("/construction/dispatch-verification", { params });
+};
+
+export const exportDispatchVerificationApi = (params?: DispatchVerificationQueryParams) => {
+  return axiosInstance.get("/construction/dispatch-verification/export", {
+    params,
+    responseType: "blob",
+  });
 };
 
 export const getDispatchVerificationDetailsApi = (loadId: string) => {

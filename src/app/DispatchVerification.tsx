@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
-import { Search, ChevronDown, Download, ArrowUpDown, ShieldCheck, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search, ChevronDown, Download, ArrowUpDown, ShieldCheck, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getDispatchVerificationApi } from "../api/projects.api";
+import { getDispatchVerificationApi, exportDispatchVerificationApi } from "../api/projects.api";
+import { downloadFileFromResponse } from "../lib/downloadUtils";
 import CustomSelect from "../components/common/CustomSelect";
-import toast from "react-hot-toast"
+import toast from "react-hot-toast";
 import DispatchDetailModal from "../components/common/DispatchDetailModal";
 
 const formatStatus = (status?: string) => {
@@ -32,13 +33,13 @@ export default function DispatchVerification() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sortBy, setSortBy] = useState("Latest");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [sortBy, setSortBy] = useState("Oldest");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
-
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -67,8 +68,54 @@ export default function DispatchVerification() {
   const loads = apiData?.loads || [];
   const total = apiData?.total || 0;
   const apiStats = apiData?.stats;
+  const enums = apiData?.enums;
 
   const totalPages = Math.ceil(total / limit) || 1;
+
+  const enumsStatus = enums?.status;
+  const enumsSortBy = enums?.sortBy;
+
+  // Status options (UI enums)
+  const statusOptions = useMemo(() => {
+    if (enumsStatus && enumsStatus.length > 0) {
+      return enumsStatus.map((s) => ({
+        label: s === "all" ? "All Loads" : formatStatus(s),
+        value: s,
+      }));
+    }
+    return [
+      { label: "All Loads", value: "all" },
+      { label: "Pending Verification", value: "pending" },
+      { label: "Verified (Ready)", value: "verified" },
+      { label: "Dispatched", value: "dispatched" },
+    ];
+  }, [enumsStatus]);
+
+  // Sort options
+  const sortOptions = useMemo(() => {
+    const rawSorts = enumsSortBy || ["Latest", "Oldest", "Weight", "PackingListNo"];
+    return rawSorts.map((s) => ({ label: s, value: s }));
+  }, [enumsSortBy]);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const res = await exportDispatchVerificationApi({
+        page,
+        limit,
+        search: debouncedSearch || undefined,
+        sortBy: sortBy || undefined,
+        status: statusFilter || undefined,
+      });
+      downloadFileFromResponse(res, "dispatch-verification.xlsx");
+      toast.success("Dispatch verification data exported successfully");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(errorMsg || "Failed to export dispatch verification data");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const stats = [
     { title: "Loads Ready for Dispatch", value: apiStats?.loadsReadyForDispatch ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
@@ -87,10 +134,11 @@ export default function DispatchVerification() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <button
-
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50"
           >
-            <Download className="w-4 h-4" />
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Export
           </button>
           <button
@@ -148,23 +196,16 @@ export default function DispatchVerification() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <CustomSelect
             title="Filter by Status"
-            options={[
-              { label: "All Statuses", value: "" },
-              { label: "Pending", value: "pending" },
-              { label: "Confirmed", value: "confirmed" },
-              { label: "Staged", value: "staged" },
-              { label: "Loaded", value: "loaded" },
-              { label: "Dispatched", value: "dispatched" },
-            ]}
+            options={statusOptions}
             value={statusFilter}
             onChange={(val) => {
               setStatusFilter(val);
               setPage(1);
             }}
-            width="180px"
+            width="200px"
           />
 
-          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px] min-w-[140px]">
+          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px] min-w-[150px]">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort by :</span>
             <select
               value={sortBy}
@@ -174,9 +215,11 @@ export default function DispatchVerification() {
               }}
               className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-6 outline-none cursor-pointer w-full"
             >
-              <option value="Latest">Latest</option>
-              <option value="Oldest">Oldest</option>
-              <option value="Weight">Weight</option>
+              {sortOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-3 h-3 text-gray-900 absolute right-4 pointer-events-none" />
           </div>
@@ -206,6 +249,7 @@ export default function DispatchVerification() {
                   </div>
                 </th>
                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Destination</th>
+                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Verification</th>
                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">Action</th>
               </tr>
@@ -213,7 +257,7 @@ export default function DispatchVerification() {
             <tbody className="divide-y divide-gray-50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="py-20 text-center">
+                  <td colSpan={10} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
                       <p className="text-sm font-bold text-gray-500">Loading dispatch verification data...</p>
@@ -222,61 +266,76 @@ export default function DispatchVerification() {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={9} className="py-20 text-center">
+                  <td colSpan={10} className="py-20 text-center">
                     <p className="text-sm font-bold text-red-500">Error loading dispatch verification data. Please try again later.</p>
                   </td>
                 </tr>
               ) : loads.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-20 text-center">
+                  <td colSpan={10} className="py-20 text-center">
                     <p className="text-sm font-bold text-gray-400">No dispatch loads found.</p>
                   </td>
                 </tr>
               ) : (
-                loads.map((row) => (
-                  <tr key={row.loadId} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-5">
-                      <div className="w-5 h-5 border-2 rounded-md transition-all cursor-pointer border-gray-200 group-hover:border-blue-400" />
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="text-xs font-bold text-gray-900">{row.loadId}</div>
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">
-                        {row.packingListNo ? `Packing List: ${row.packingListNo}` : "-"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-900">{row.truck || "-"}</td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-400">-</td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-900">{row.totalBundles ?? 0}</td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-900">{formatWeight(row.totalWeight)}</td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-500">
-                      <div>{row.destination || "-"}</div>
-                      {row.project && (
+                loads.map((row) => {
+                  const targetLoadId = row.loadId || row._id || "";
+                  return (
+                    <tr key={targetLoadId} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="px-6 py-5">
+                        <div className="w-5 h-5 border-2 rounded-md transition-all cursor-pointer border-gray-200 group-hover:border-blue-400" />
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="text-xs font-bold text-gray-900">{row.loadId}</div>
                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">
-                          {row.project.projectName || "-"} ({row.project.jobId || "-"})
+                          {row.packingListNo ? `Packing List: ${row.packingListNo}` : "-"}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className={`
-                        px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit
-                        ${getStatusStyle(row.status)}
-                      `}>
-                        {formatStatus(row.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedId(row.loadId);
-                          setIsModalOpen(true);
-                        }}
-                        className="bg-[#6366F1] text-white px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-blue-800 transition-all shadow-sm"
-                      >
-                        View Load
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-5 text-xs font-bold text-gray-900">{row.truck || "-"}</td>
+                      <td className="px-6 py-5 text-xs font-bold text-gray-400">-</td>
+                      <td className="px-6 py-5 text-xs font-bold text-gray-900">{row.totalBundles ?? 0}</td>
+                      <td className="px-6 py-5 text-xs font-bold text-gray-900">{formatWeight(row.totalWeight)}</td>
+                      <td className="px-6 py-5 text-xs font-bold text-gray-500">
+                        <div>{row.destination || "-"}</div>
+                        {row.project && (
+                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">
+                            {row.project.projectName || "-"} ({row.project.jobId || "-"})
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${row.weightVerified ? "text-emerald-600" : "text-amber-600"}`}>
+                            {row.weightVerified ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                            Weight: {row.weightVerified ? "OK" : "Pending"}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${row.loadingVerified ? "text-emerald-600" : "text-amber-600"}`}>
+                            {row.loadingVerified ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                            Loading: {row.loadingVerified ? "OK" : "Pending"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`
+                          px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit
+                          ${getStatusStyle(row.status)}
+                        `}>
+                          {formatStatus(row.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <button
+                          onClick={() => {
+                            setSelectedId(targetLoadId);
+                            setIsModalOpen(true);
+                          }}
+                          className="bg-[#6366F1] text-white px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-blue-800 transition-all shadow-sm"
+                        >
+                          View Load
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

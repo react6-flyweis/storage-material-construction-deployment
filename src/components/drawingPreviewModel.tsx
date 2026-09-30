@@ -16,6 +16,7 @@ type DrawingPreviewModalProps = {
     size: string;
     status: string;
     key?: string;
+    type?: string;
   } | null;
   project?: {
     name: string;
@@ -35,8 +36,14 @@ export default function DrawingPreviewModal({
 }: DrawingPreviewModalProps) {
   const currentStatus = file?.status || fileId;
   const isPdf = Boolean(
+    file?.type === "drawing" ||
     file?.name?.toLowerCase().endsWith(".pdf") || 
     file?.key?.toLowerCase().includes(".pdf")
+  );
+  const isVideo = Boolean(
+    file?.type === "video" ||
+    file?.name?.toLowerCase().match(/\.(mp4|mov|webm|avi|mkv|ogg)$/i) ||
+    file?.key?.toLowerCase().match(/\.(mp4|mov|webm|avi|mkv|ogg)/i)
   );
 
   const getImageSrc = () => {
@@ -98,7 +105,14 @@ export default function DrawingPreviewModal({
         </div>
 
         <div className="bg-[#F9FAFB] flex justify-center items-center lg:px-6 px-3 py-4 w-full min-h-[550px]">
-          {isPdf && file?.key ? (
+          {isVideo && file?.key ? (
+            <video
+              src={file.key}
+              controls
+              autoPlay
+              className="max-h-[70vh] max-w-full rounded-lg shadow-sm"
+            />
+          ) : isPdf && file?.key ? (
             <iframe
               src={`${file.key}#toolbar=0`}
               title={file?.name || "PDF Preview"}

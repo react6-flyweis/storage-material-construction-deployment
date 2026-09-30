@@ -34,7 +34,12 @@ export function formatDateTime(dateStr?: string): string {
 
 export function isImageFile(fileName?: string): boolean {
   if (!fileName) return false;
-  return /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(fileName);
+  return /\.(jpg|jpeg|png|webp|gif|svg|heic)$/i.test(fileName);
+}
+
+export function isVideoFile(fileName?: string): boolean {
+  if (!fileName) return false;
+  return /\.(mp4|mov|webm|avi|mkv|ogg)$/i.test(fileName);
 }
 
 export function downloadFile(fileUrl: string, name: string): void {

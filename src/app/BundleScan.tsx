@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
-import { Search, ChevronDown, Download, ArrowUpDown, QrCode, Keyboard } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search, ChevronDown, Download, ArrowUpDown, QrCode, Keyboard, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getBundleScansApi, scanBundleScanApi } from "../api/projects.api";
+import { getBundleScansApi, exportBundleScanApi, scanBundleScanApi } from "../api/projects.api";
+import { downloadFileFromResponse } from "../lib/downloadUtils";
 import CustomSelect from "../components/common/CustomSelect";
 import ScanQRCodeModal from "../components/common/ScanQRCodeModal";
 import BundleDetailsModal from "../components/common/BundleDetailsModal";
+import toast from "react-hot-toast";
 
 
 const formatStatus = (status?: string) => {
@@ -42,8 +44,9 @@ export default function BundleScan() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sortBy, setSortBy] = useState("Latest");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [sortBy, setSortBy] = useState("Weight");
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Modals state
   const [scanOpen, setScanOpen] = useState(false);
@@ -77,8 +80,55 @@ export default function BundleScan() {
   const bundles = apiData?.bundles || [];
   const total = apiData?.total || 0;
   const apiStats = apiData?.stats;
+  const enums = apiData?.enums;
 
   const totalPages = Math.ceil(total / limit) || 1;
+
+  const enumsStatus = enums?.status;
+  const enumsSortBy = enums?.sortBy;
+
+  // Status enum options
+  const statusOptions = useMemo(() => {
+    if (enumsStatus && enumsStatus.length > 0) {
+      return enumsStatus.map((s) => ({
+        label: s === "all" ? "All Statuses" : formatStatus(s),
+        value: s,
+      }));
+    }
+    return [
+      { label: "All Statuses", value: "all" },
+      { label: "Pending", value: "pending" },
+      { label: "Staged", value: "staged" },
+      { label: "On Truck", value: "on_truck" },
+      { label: "Loaded", value: "loaded" },
+    ];
+  }, [enumsStatus]);
+
+  // Sort options
+  const sortOptions = useMemo(() => {
+    const rawSorts = enumsSortBy || ["Latest", "Oldest", "Weight"];
+    return rawSorts.map((s) => ({ label: s, value: s }));
+  }, [enumsSortBy]);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const res = await exportBundleScanApi({
+        page,
+        limit,
+        search: debouncedSearch || undefined,
+        sortBy: sortBy || undefined,
+        status: statusFilter || undefined,
+      });
+      downloadFileFromResponse(res, "bundle-scan.xlsx");
+      toast.success("Bundle scan data exported successfully");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(errorMsg || "Failed to export bundle scan data");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const stats = [
     { title: "Bundles Scanned", value: apiStats?.bundlesScanned ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
@@ -96,14 +146,14 @@ export default function BundleScan() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <button
-
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50"
           >
-            <Download className="w-4 h-4" />
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Export
           </button>
           <button
-
             onClick={() => setScanOpen(true)}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-750 shadow-sm hover:bg-gray-50 transition-all"
           >
@@ -156,12 +206,7 @@ export default function BundleScan() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <CustomSelect
             title="Filter by Status"
-            options={[
-              { label: "All Statuses", value: "" },
-              { label: "Pending", value: "pending" },
-              { label: "Assigned to Truck", value: "assigned_to_truck" },
-              { label: "Dispatched", value: "dispatched" },
-            ]}
+            options={statusOptions}
             value={statusFilter}
             onChange={(val) => {
               setStatusFilter(val);
@@ -170,7 +215,7 @@ export default function BundleScan() {
             width="180px"
           />
 
-          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px]">
+          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px] min-w-[150px]">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort by :</span>
             <select
               value={sortBy}
@@ -178,11 +223,13 @@ export default function BundleScan() {
                 setSortBy(e.target.value);
                 setPage(1);
               }}
-              className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-6 outline-none cursor-pointer"
+              className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-6 outline-none cursor-pointer w-full"
             >
-              <option value="Latest">Latest</option>
-              <option value="Oldest">Oldest</option>
-              <option value="Weight">Weight</option>
+              {sortOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-3 h-3 text-gray-900 absolute right-4 pointer-events-none" />
           </div>

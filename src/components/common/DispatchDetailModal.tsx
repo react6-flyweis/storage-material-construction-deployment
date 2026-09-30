@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ArrowLeft, Check, Loader2, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDispatchVerificationDetailsApi, verifyLoadApi, confirmDispatchApi } from "../../api/projects.api";
@@ -25,6 +26,7 @@ const formatStatus = (status?: string) => {
 
 export default function DispatchDetailModal({ open, onClose, loadId }: DispatchDetailModalProps) {
   const queryClient = useQueryClient();
+  const [actualWeightInput, setActualWeightInput] = useState<string>("");
 
   const { data: detailData, isLoading, isError } = useQuery({
     queryKey: ["dispatchVerificationDetail", loadId],
@@ -33,14 +35,16 @@ export default function DispatchDetailModal({ open, onClose, loadId }: DispatchD
   });
 
   const verifyLoadMutation = useMutation({
-    mutationFn: () => verifyLoadApi(loadId!),
+    mutationFn: (weight?: number) =>
+      verifyLoadApi(loadId!, weight !== undefined ? { actualWeight: weight } : undefined),
     onSuccess: (res) => {
       toast.success(res.data?.message || "Load verified successfully");
       queryClient.invalidateQueries({ queryKey: ["dispatchVerificationDetail", loadId] });
       queryClient.invalidateQueries({ queryKey: ["dispatchVerification"] });
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to verify load");
+    onError: (err: unknown) => {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(errorMsg || "Failed to verify load");
     },
   });
 
@@ -51,8 +55,9 @@ export default function DispatchDetailModal({ open, onClose, loadId }: DispatchD
       queryClient.invalidateQueries({ queryKey: ["dispatchVerificationDetail", loadId] });
       queryClient.invalidateQueries({ queryKey: ["dispatchVerification"] });
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to confirm dispatch");
+    onError: (err: unknown) => {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(errorMsg || "Failed to confirm dispatch");
     },
   });
 
@@ -70,7 +75,22 @@ export default function DispatchDetailModal({ open, onClose, loadId }: DispatchD
   const plannedWeight = loadDetail?.plannedWeight ?? 0;
   const weightVerified = loadDetail?.weightVerified ?? false;
   const loadingVerified = loadDetail?.loadingVerified ?? false;
+  const isFullyVerified = weightVerified && loadingVerified;
+  const isDispatched = displayStatus?.toLowerCase() === "dispatched";
   const bundles = loadDetail?.bundles || [];
+
+  const handleVerifyLoad = () => {
+    const parsedWeight = actualWeightInput ? parseFloat(actualWeightInput) : undefined;
+    verifyLoadMutation.mutate(parsedWeight);
+  };
+
+  const handleConfirmDispatch = () => {
+    if (!isFullyVerified && !isDispatched) {
+      toast.error("Please verify the load before confirming dispatch.");
+      return;
+    }
+    confirmDispatchMutation.mutate();
+  };
 
   return (
     <Modal
@@ -98,20 +118,26 @@ export default function DispatchDetailModal({ open, onClose, loadId }: DispatchD
           </button>
           <div className="flex items-center gap-3">
             <button
-              disabled={confirmDispatchMutation.isPending || isLoading}
-              onClick={() => confirmDispatchMutation.mutate()}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#8B5CF6] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-purple-100 hover:opacity-90 transition-all disabled:opacity-50"
+              disabled={confirmDispatchMutation.isPending || isLoading || isDispatched}
+              onClick={handleConfirmDispatch}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg transition-all ${
+                isDispatched
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  : !isFullyVerified
+                  ? "bg-purple-300 text-white cursor-pointer hover:bg-purple-400"
+                  : "bg-[#8B5CF6] text-white shadow-purple-100 hover:opacity-90"
+              }`}
             >
               {confirmDispatchMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              Confirm Dispatch
+              {isDispatched ? "Dispatched" : "Confirm Dispatch"}
             </button>
             <button
               disabled={verifyLoadMutation.isPending || isLoading}
-              onClick={() => verifyLoadMutation.mutate()}
+              onClick={handleVerifyLoad}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#6366F1] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-blue-100 hover:opacity-90 transition-all disabled:opacity-50"
             >
               {verifyLoadMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              Verify Load
+              {isFullyVerified ? "Re-Verify Load" : "Verify Load"}
             </button>
           </div>
         </div>
@@ -171,6 +197,19 @@ export default function DispatchDetailModal({ open, onClose, loadId }: DispatchD
                     <div className="flex justify-between items-center py-0.5 border-b border-gray-50">
                       <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Planned Weight</span>
                       <span className="text-xs font-bold text-gray-900">{formatWeight(plannedWeight)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-0.5 border-b border-gray-50">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Actual Weight</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          placeholder="Scale weight (lbs)"
+                          value={actualWeightInput}
+                          onChange={(e) => setActualWeightInput(e.target.value)}
+                          className="w-36 h-8 px-2.5 text-xs font-bold text-right bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500"
+                        />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">LBS</span>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center py-0.5 border-b border-gray-50">
                       <span className="text-xs font-bold text-gray-900">Weight verified</span>
