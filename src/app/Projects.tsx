@@ -189,9 +189,9 @@ export default function Projects() {
       </div>
 
       {activeTab === "calendar" && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4 mb-3">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-bold text-gray-900">Project</span>
+            <span className="text-sm font-semibold text-gray-800">Project</span>
             <ProjectSelector
               value={selectedCalendarProjectId}
               onChange={setSelectedCalendarProjectId}
@@ -202,9 +202,9 @@ export default function Projects() {
           </div>
           <button
             onClick={() => setToggle(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded shadow-sm transition-colors text-sm flex items-center gap-2 cursor-pointer"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-1.5 cursor-pointer"
           >
-            <span className="text-lg leading-none">+</span> Add Delivery
+            <span className="text-base leading-none font-normal">+</span> Add Delivery
           </button>
         </div>
       )}
