@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, ChevronDown, Download, ListChecks, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getPackingListsApi } from "../api/projects.api";
+import { getPackingListsApi, exportPackingListsApi } from "../api/projects.api";
+import { downloadFileFromResponse } from "../lib/downloadUtils";
 import CustomSelect from "../components/common/CustomSelect";
 import PackingListDetailModal from "../components/common/PackingListDetailModal";
+import toast from "react-hot-toast";
 
 const formatStatus = (status?: string) => {
   if (!status) return "-";
@@ -24,9 +26,10 @@ export default function PackingLists() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState("Latest");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("confirmed");
   const [selectedPackingListId, setSelectedPackingListId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -55,8 +58,59 @@ export default function PackingLists() {
   const packingLists = apiData?.packingLists || [];
   const total = apiData?.total || 0;
   const apiStats = apiData?.stats;
+  const enums = apiData?.enums;
 
   const totalPages = Math.ceil(total / limit) || 1;
+
+  const enumsStatus = enums?.status;
+  const enumsSortBy = enums?.sortBy;
+
+  // DB status enum options
+  const statusOptions = useMemo(() => {
+    if (enumsStatus && enumsStatus.length > 0) {
+      return [
+        { label: "All Statuses", value: "" },
+        ...enumsStatus.map((s) => ({ label: formatStatus(s), value: s })),
+      ];
+    }
+    return [
+      { label: "All Statuses", value: "" },
+      { label: "Draft", value: "draft" },
+      { label: "Confirmed", value: "confirmed" },
+      { label: "Ready", value: "ready" },
+      { label: "Loading", value: "loading" },
+      { label: "Delivery Created", value: "delivery_created" },
+      { label: "Dispatched", value: "dispatched" },
+      { label: "Delivered", value: "delivered" },
+      { label: "Cancelled", value: "cancelled" },
+    ];
+  }, [enumsStatus]);
+
+  // Sort options
+  const sortOptions = useMemo(() => {
+    const rawSorts = enumsSortBy || ["Latest", "Oldest", "Weight", "PackingListNo"];
+    return rawSorts.map((s) => ({ label: s, value: s }));
+  }, [enumsSortBy]);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const res = await exportPackingListsApi({
+        page,
+        limit,
+        search: debouncedSearch || undefined,
+        sortBy: sortBy || undefined,
+        status: statusFilter || undefined,
+      });
+      downloadFileFromResponse(res, "packing-lists.xlsx");
+      toast.success("Packing lists exported successfully");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(errorMsg || "Failed to export packing lists");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const stats = [
     { title: "Total Packing List", value: apiStats?.totalPackingList ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
@@ -75,9 +129,11 @@ export default function PackingLists() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50"
           >
-            <Download className="w-4 h-4" />
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Export
           </button>
         </div>
@@ -117,22 +173,16 @@ export default function PackingLists() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <CustomSelect
             title="Filter by Status"
-            options={[
-              { label: "All Statuses", value: "" },
-              { label: "Confirmed", value: "confirmed" },
-              { label: "Staged", value: "staged" },
-              { label: "Loaded", value: "loaded" },
-              { label: "Dispatched", value: "dispatched" },
-            ]}
+            options={statusOptions}
             value={statusFilter}
             onChange={(val) => {
               setStatusFilter(val);
               setPage(1);
             }}
-            width="180px"
+            width="190px"
           />
 
-          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px] min-w-[140px]">
+          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px] min-w-[160px]">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort by :</span>
             <select
               value={sortBy}
@@ -142,9 +192,11 @@ export default function PackingLists() {
               }}
               className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-6 outline-none cursor-pointer w-full"
             >
-              <option value="Latest">Latest</option>
-              <option value="Oldest">Oldest</option>
-              <option value="Weight">Weight</option>
+              {sortOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-3 h-3 text-gray-900 absolute right-4 pointer-events-none" />
           </div>
