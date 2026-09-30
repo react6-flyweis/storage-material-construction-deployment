@@ -132,6 +132,79 @@ export interface DrawingsApiResponse {
   data: DrawingsResponseData;
 }
 
+export interface PresignedUrlPayload {
+  fileName: string;
+  fileType: string;
+  folder: string;
+}
+
+export interface PresignedUrlResponseData {
+  uploadUrl: string;
+  fileUrl: string;
+  key: string;
+}
+
+export interface PresignedUrlApiResponse {
+  success: boolean;
+  message?: string;
+  data: PresignedUrlResponseData;
+}
+
+export interface MediaDocument {
+  _id: string;
+  url: string;
+  name: string;
+  type: "photo" | "video" | string;
+  uploadedBy?: string;
+  uploadedAt?: string;
+  approvalStatus?: string;
+  size?: string;
+}
+
+export interface AttachMediaPayload {
+  url: string;
+  name: string;
+  type: "photo" | "video";
+}
+
+export interface AttachMediaApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    document: MediaDocument;
+  };
+}
+
+export interface ConstructionMediaQueryParams {
+  type?: "photo" | "video";
+  leadId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ConstructionMediaProject {
+  leadId: string;
+  projectId: string;
+  projectName: string;
+  location?: string | Record<string, unknown> | null;
+  lastUpdate?: string;
+  documents?: MediaDocument[];
+  photos?: MediaDocument[];
+  videos?: MediaDocument[];
+  photoCount?: number;
+  videoCount?: number;
+}
+
+export interface ConstructionMediaApiResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    projects: ConstructionMediaProject[];
+    total: number;
+  };
+}
+
 export interface AssignedToUser {
   _id: string;
   name: string;
@@ -255,10 +328,62 @@ export interface DeliveriesStats {
   totalToday: number;
 }
 
+export interface DeliveriesQueryParams {
+  page?: number;
+  limit?: number;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "DeliveryDate" | string;
+  search?: string;
+  status?: string;
+  deliveryStatus?: string;
+  leadId?: string;
+  projectId?: string;
+  materialType?: string;
+  siteDestination?: string;
+  transporter?: string;
+  driver?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface DeliveryFiltersData {
+  deliveryStatuses?: string[];
+  siteDestinations?: string[];
+  transporters?: string[];
+  drivers?: string[];
+  materialTypes?: string[];
+  sortBy?: string[];
+  relatedEnums?: {
+    labelSortBy?: string[];
+    labelStatus?: string[];
+    bundleStatus?: string[];
+    bundleScanSortBy?: string[];
+    bundleScanStatus?: string[];
+    packingListSortBy?: string[];
+    packingListStatus?: string[];
+    dispatchSortBy?: string[];
+    dispatchStatus?: string[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface DeliveryFiltersApiResponse {
+  success: boolean;
+  message: string;
+  data: DeliveryFiltersData;
+}
+
 export interface DeliveriesResponseData {
   deliveries: ConstructionDelivery[];
   total: number;
   stats: DeliveriesStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    deliveryStatuses?: string[];
+    [key: string]: unknown;
+  };
 }
 
 export interface DeliveriesApiResponse {
@@ -282,6 +407,7 @@ export interface BundleLabel {
   totalWeight: number;
   maxLengthFeet: number;
   status: string;
+  labelPrinted?: boolean;
   packingListId: string;
   project: BundleProject;
 }
@@ -297,6 +423,13 @@ export interface LabelsResponseData {
   bundles: BundleLabel[];
   total: number;
   stats: LabelStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    labelStatus?: string[];
+    bundleStatus?: string[];
+  };
 }
 
 export interface LabelsApiResponse {
@@ -309,7 +442,7 @@ export interface LabelsQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "BundleNo" | string;
   status?: string;
 }
 
@@ -339,6 +472,12 @@ export interface BundleScanResponseData {
   bundles: ScannedBundle[];
   total: number;
   stats: BundleScanStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    status?: string[];
+  };
 }
 
 export interface BundleScanApiResponse {
@@ -351,8 +490,8 @@ export interface BundleScanQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
-  status?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | string;
+  status?: "pending" | "staged" | "on_truck" | "loaded" | "all" | string;
 }
 
 export interface PackingListProject {
@@ -437,6 +576,12 @@ export interface PackingListResponseData {
   packingLists: PackingListItem[];
   total: number;
   stats: PackingListStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    status?: string[];
+  };
 }
 
 export interface PackingListApiResponse {
@@ -449,8 +594,9 @@ export interface PackingListsQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "PackingListNo" | string;
   status?: string;
+  leadId?: string;
 }
 
 export interface DispatchLoadProject {
@@ -461,6 +607,7 @@ export interface DispatchLoadProject {
 
 export interface DispatchLoad {
   loadId: string;
+  _id?: string;
   packingListNo: string;
   truck: string;
   totalBundles: number;
@@ -468,6 +615,8 @@ export interface DispatchLoad {
   totalWeight: number;
   destination: string;
   status: string;
+  weightVerified?: boolean;
+  loadingVerified?: boolean;
   project: DispatchLoadProject;
 }
 
@@ -482,6 +631,12 @@ export interface DispatchVerificationResponseData {
   loads: DispatchLoad[];
   total: number;
   stats: DispatchVerificationStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    status?: string[];
+  };
 }
 
 export interface DispatchVerificationApiResponse {
@@ -500,6 +655,7 @@ export interface DispatchVerificationBundle {
 
 export interface DispatchVerificationDetail {
   loadId: string;
+  _id?: string;
   packingListNo: string;
   truck: string;
   destination: string;
@@ -523,8 +679,8 @@ export interface DispatchVerificationQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
-  status?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "PackingListNo" | string;
+  status?: "pending" | "verified" | "dispatched" | "all" | string;
 }
 
 export interface DeliveryDetailsResponseData {
@@ -973,4 +1129,34 @@ export interface BuildingDrawingsApiResponse {
   data: BuildingDrawingsResponseData;
 }
 
+export interface CreateDeliveryPayload {
+  title?: string;
+  leadId: string;
+  sectionLocation?: string;
+  deliveryDate: string;
+  description?: string;
+  notes?: string;
+  attachments?: string[];
+}
 
+export interface CreatedDeliveryData {
+  _id: string;
+  deliveryNumber: string;
+  status: string;
+  leadId: string;
+  loadDescription?: string;
+  description?: string;
+  deliveryLocation?: string;
+  deliveryDate: string;
+  additionalNotes?: string;
+  attachments?: string[];
+  statusHistory?: Array<{ status: string; changedAt: string }>;
+}
+
+export interface CreateDeliveryApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    delivery: CreatedDeliveryData;
+  };
+}
