@@ -56,7 +56,7 @@ interface NewTaskData {
   description: string;
   priority: string;
   deadline?: string;
-  assignedTo: string;
+  assignedTo?: string | null;
   status: "todo" | "inProgress" | "done";
 }
 
@@ -123,7 +123,7 @@ export default function TaskBoard({ tasks: propTasks, isLoading }: TaskBoardProp
       description: data.description,
       priority: capitalizeFirstLetter(data.priority) as TaskPriority,
       due: data.deadline || "NA",
-      assignee: data.assignedTo,
+      assignee: data.assignedTo || "Unassigned",
       status: data.status,
     };
 
