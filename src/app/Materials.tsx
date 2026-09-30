@@ -66,10 +66,8 @@ export default function Materials() {
 
   // Filters State
   const [projectFilter, setProjectFilter] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
-  const [siteLocationFilter, setSiteLocationFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
@@ -88,10 +86,8 @@ export default function Materials() {
       page,
       limit,
       projectFilter,
-      departmentFilter,
       statusFilter,
       priorityFilter,
-      siteLocationFilter,
       searchQuery,
       startDateFilter,
       endDateFilter,
@@ -102,10 +98,8 @@ export default function Materials() {
         limit,
         leadId: projectFilter || undefined,
         projectId: projectFilter || undefined,
-        department: departmentFilter || undefined,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
-        siteLocation: siteLocationFilter || undefined,
         search: searchQuery.trim() || undefined,
         dateFrom: startDateFilter || undefined,
         dateTo: endDateFilter || undefined,
@@ -122,25 +116,17 @@ export default function Materials() {
 
   // Filter options derived from API or fallbacks
   const projectOptions = filtersData?.projects || [];
-  const departmentOptions = filtersData?.departments && filtersData.departments.length > 0
-    ? filtersData.departments
-    : Array.from(new Set(requests.map((r) => r.department).filter(Boolean)));
   const statusOptions = filtersData?.statuses && filtersData.statuses.length > 0
     ? filtersData.statuses
     : ["pending", "approved", "rejected", "fulfilled", "cancelled"];
   const priorityOptions = filtersData?.priorities && filtersData.priorities.length > 0
     ? filtersData.priorities
     : ["low", "medium", "high", "critical"];
-  const siteLocationOptions = filtersData?.siteLocations && filtersData.siteLocations.length > 0
-    ? filtersData.siteLocations
-    : Array.from(new Set(requests.map((r) => r.siteLocation).filter(Boolean)));
 
   const hasActiveFilters = Boolean(
     projectFilter ||
-    departmentFilter ||
     statusFilter ||
     priorityFilter ||
-    siteLocationFilter ||
     searchQuery ||
     startDateFilter ||
     endDateFilter
@@ -148,10 +134,8 @@ export default function Materials() {
 
   const handleClearFilters = () => {
     setProjectFilter("");
-    setDepartmentFilter("");
     setStatusFilter("");
     setPriorityFilter("");
-    setSiteLocationFilter("");
     setSearchQuery("");
     setStartDateFilter("");
     setEndDateFilter("");
@@ -164,10 +148,8 @@ export default function Materials() {
       const res = await exportMaterialRequestsApi({
         leadId: projectFilter || undefined,
         projectId: projectFilter || undefined,
-        department: departmentFilter || undefined,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
-        siteLocation: siteLocationFilter || undefined,
         search: searchQuery.trim() || undefined,
         dateFrom: startDateFilter || undefined,
         dateTo: endDateFilter || undefined,
@@ -259,7 +241,7 @@ export default function Materials() {
 
       {/* Filters Section (Dropdowns + Search + Date Range) */}
       <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {/* Search by Request ID */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -352,50 +334,6 @@ export default function Materials() {
               {priorityOptions.map((pr) => (
                 <option key={pr} value={pr}>
                   {pr.charAt(0).toUpperCase() + pr.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Department Filter */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              Department
-            </label>
-            <select
-              value={departmentFilter}
-              onChange={(e) => {
-                setDepartmentFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="">All Departments</option>
-              {departmentOptions.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Site Location Filter */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              Site Location
-            </label>
-            <select
-              value={siteLocationFilter}
-              onChange={(e) => {
-                setSiteLocationFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="">All Site Locations</option>
-              {siteLocationOptions.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
                 </option>
               ))}
             </select>
