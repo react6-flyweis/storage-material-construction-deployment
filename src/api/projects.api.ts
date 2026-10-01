@@ -40,6 +40,8 @@ import type {
   MediaDocument,
   CreateDeliveryPayload,
   CreateDeliveryApiResponse,
+  WorkLogsApiResponse,
+  GetWorkLogsParams,
 } from "../types/projects.types";
 
 export interface ProjectsQueryParams {
@@ -55,6 +57,7 @@ export interface CalendarQueryParams {
   month: number;
   year: number;
   leadId?: string;
+  projectId?: string;
 }
 
 export const getProjectsApi = (params?: ProjectsQueryParams) => {
@@ -262,6 +265,12 @@ export const createWorkLogApi = (payload: CreateWorkLogPayload) => {
   return axiosInstance.post("/construction/work-logs", payload);
 };
 
+export const getWorkLogsApi = (params?: GetWorkLogsParams) => {
+  return axiosInstance.get<WorkLogsApiResponse>("/construction/work-logs", {
+    params,
+  });
+};
+
 export const markDeliveryReceivedApi = (deliveryId: string) => {
   return axiosInstance.post(`/construction/deliveries/${deliveryId}/mark-received`);
 };
@@ -419,6 +428,26 @@ export interface CreateMaterialRequestPayload {
 export const createMaterialRequestApi = (payload: CreateMaterialRequestPayload) => {
   return axiosInstance.post("/construction/material-requests", payload);
 };
+
+export interface UpdateMaterialRequestStatusPayload {
+  status: string;
+  reviewNotes?: string;
+}
+
+export const updateMaterialRequestStatusApi = (
+  requestId: string,
+  payload: UpdateMaterialRequestStatusPayload
+) => {
+  return axiosInstance.put<{
+    success: boolean;
+    message: string;
+    data?: {
+      materialRequest?: MaterialRequest;
+      [key: string]: unknown;
+    };
+  }>(`/construction/material-requests/${requestId}/status`, payload);
+};
+
 
 export const getBundleDetailsApi = (bundleId: string) => {
   return axiosInstance.get<BundleDetailsApiResponse>(`/construction/bundles/${bundleId}`);
