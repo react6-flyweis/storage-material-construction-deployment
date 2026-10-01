@@ -8,11 +8,14 @@ import ProjectSelector from "./common/ProjectSelector";
 import UploadCameraIcon from "../assets/uploadcameraicon.svg";
 import { createWorkLogApi, getTasksApi, getProjectsApi } from "../api/projects.api";
 import Modal from "./common/Modal";
+import { uploadFileToS3 } from "../lib/upload";
+import { X, Loader2 } from "lucide-react";
 
 type DailyLogModalProps = {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  defaultLeadId?: string;
 };
 
 const dailyWorkLogSchema = z.object({
@@ -20,11 +23,11 @@ const dailyWorkLogSchema = z.object({
   selectedProject: z.string().min(1, "Project is required"),
   taskId: z.string().nullable().optional(),
   progress: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
+    (val) => (val === "" || val === undefined || val === null ? 0 : Number(val)),
     z.number({ error: "Progress must be a number" })
       .min(0, "Progress must be at least 0")
       .max(100, "Progress cannot exceed 100")
-  ),
+  ).optional(),
   description: z.string().min(1, "Description is required"),
   issues: z.string().optional(),
 });
@@ -35,9 +38,12 @@ export default function DailyLogModel({
   open,
   onClose,
   onSubmit,
+  defaultLeadId,
 }: DailyLogModalProps) {
   const [serverError, setServerError] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
@@ -47,19 +53,29 @@ export default function DailyLogModel({
     watch,
     setValue,
     formState: { errors },
-  } = useForm({
+  } = useForm<DailyWorkLogFormValues>({
     resolver: zodResolver(dailyWorkLogSchema),
     defaultValues: {
-      date: "",
-      selectedProject: "",
+      date: new Date().toISOString().split("T")[0],
+      selectedProject: defaultLeadId || "",
       taskId: "null",
-      progress: undefined,
+      progress: 0,
       description: "",
       issues: "",
     },
   });
 
   const selectedProject = watch("selectedProject");
+
+  // Sync defaultLeadId when modal opens
+  useEffect(() => {
+    if (open) {
+      if (defaultLeadId) {
+        setValue("selectedProject", defaultLeadId);
+      }
+      setValue("date", new Date().toISOString().split("T")[0]);
+    }
+  }, [open, defaultLeadId, setValue]);
 
   // Reset task choice when project changes
   useEffect(() => {
@@ -96,6 +112,7 @@ export default function DailyLogModel({
     mutationFn: createWorkLogApi,
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["work-logs"] });
 
       const selectedProjectName = projectsData?.data?.data?.projects?.find(
         (p) => p._id === variables.leadId
@@ -112,10 +129,7 @@ export default function DailyLogModel({
         progress: variables.progress,
       });
 
-      onClose();
-      reset();
-      setFile(null);
-      setServerError("");
+      handleCancel();
     },
     onError: (err: unknown) => {
       const responseErr = err as { response?: { data?: { message?: string } } };
@@ -125,35 +139,72 @@ export default function DailyLogModel({
     },
   });
 
-  const onFormSubmit = (values: DailyWorkLogFormValues) => {
+  const onFormSubmit = async (values: DailyWorkLogFormValues) => {
+    setServerError("");
+    let photoUrls: string[] = [];
+
+    if (files.length > 0) {
+      setIsUploading(true);
+      try {
+        const uploadPromises = files.map((f) => uploadFileToS3(f, "documents"));
+        photoUrls = await Promise.all(uploadPromises);
+      } catch (uploadErr) {
+        setIsUploading(false);
+        setServerError(
+          uploadErr instanceof Error
+            ? uploadErr.message
+            : "Failed to upload attached photos. Please try again."
+        );
+        return;
+      }
+      setIsUploading(false);
+    }
+
     mutation.mutate({
       leadId: values.selectedProject,
       taskId: values.taskId === "null" ? null : (values.taskId || null),
       date: values.date,
-      progress: values.progress,
+      progress: typeof values.progress === "number" ? values.progress : 0,
       description: values.description,
-      photos: [],
+      photos: photoUrls,
       issues: values.issues || "",
     });
   };
 
   const handleCancel = () => {
     reset();
-    setFile(null);
+    setFiles([]);
+    setFilePreviews([]);
+    setIsUploading(false);
     setServerError("");
     onClose();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const ext = selectedFile.name.split(".").pop()?.toLowerCase();
-      if (ext === "png" || ext === "jpg" || ext === "jpeg") {
-        setFile(selectedFile);
-      } else {
-        alert("Only PNG and JPG files are allowed!");
+  const handleFilesAdded = (selectedFiles: FileList | null) => {
+    if (!selectedFiles || selectedFiles.length === 0) return;
+    const newFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    Array.from(selectedFiles).forEach((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase();
+      if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "webp") {
+        newFiles.push(f);
+        newPreviews.push(URL.createObjectURL(f));
       }
+    });
+
+    if (newFiles.length === 0) {
+      alert("Only PNG, JPG, JPEG, and WEBP image files are allowed!");
+      return;
     }
+
+    setFiles((prev) => [...prev, ...newFiles]);
+    setFilePreviews((prev) => [...prev, ...newPreviews]);
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setFilePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -265,35 +316,57 @@ export default function DailyLogModel({
           <div>
             <label className="text-sm text-[#111827]">Upload Photos</label>
             <div
-              className="border-2 border-dashed rounded-lg mt-2 p-6 flex flex-col items-center justify-center text-center gap-2 cursor-pointer"
+              className="border-2 border-dashed rounded-lg mt-2 p-4 flex flex-col items-center justify-center text-center gap-2 cursor-pointer hover:border-blue-400 transition-colors"
               onClick={() => document.getElementById("fileInput")?.click()}
             >
-              {file ? (
-                <p className="text-sm mt-2">{file.name}</p>
-              ) : (
-                <>
-                  <img
-                    src={UploadCameraIcon}
-                    alt=""
-                    className="text-2xl mb-1"
-                  />
-                  <p className="text-sm text-[#6B7280]">
-                    Click to upload photos or drag and drop
-                  </p>
-                  <p className="text-xs text-[#9CA3AF]">
-                    PNG,JPG up to 10MB each
-                  </p>
-                </>
-              )}
+              <img
+                src={UploadCameraIcon}
+                alt=""
+                className="text-2xl mb-1"
+              />
+              <p className="text-sm text-[#6B7280]">
+                Click to upload photos or drag and drop
+              </p>
+              <p className="text-xs text-[#9CA3AF]">
+                PNG, JPG, WEBP up to 10MB each (multiple supported)
+              </p>
 
               <input
                 id="fileInput"
                 type="file"
-                accept=".png,.jpg,.jpeg"
+                multiple
+                accept=".png,.jpg,.jpeg,.webp"
                 className="hidden"
-                onChange={handleFileChange}
+                onChange={(e) => handleFilesAdded(e.target.files)}
               />
             </div>
+
+            {filePreviews.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {filePreviews.map((previewUrl, index) => (
+                  <div
+                    key={index}
+                    className="relative w-16 h-16 rounded-md overflow-hidden border border-gray-200 group"
+                  >
+                    <img
+                      src={previewUrl}
+                      alt="upload preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(index);
+                      }}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black transition cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -314,16 +387,23 @@ export default function DailyLogModel({
             <button
               type="button"
               onClick={handleCancel}
-              className="px-6 py-2 rounded-lg bg-[#F3F4F6] text-[#111827]"
+              className="px-6 py-2 rounded-lg bg-[#F3F4F6] text-[#111827] hover:bg-gray-200 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={mutation.isPending}
-              className="px-6 py-2 rounded-lg bg-[#2563EB] text-white flex items-center gap-2 disabled:opacity-50"
+              disabled={mutation.isPending || isUploading}
+              className="px-6 py-2 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white flex items-center gap-2 disabled:opacity-50 transition cursor-pointer"
             >
-              {mutation.isPending ? "Creating..." : "Create"}
+              {(mutation.isPending || isUploading) && (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              )}
+              {isUploading
+                ? "Uploading Photos..."
+                : mutation.isPending
+                ? "Creating..."
+                : "Create"}
             </button>
           </div>
         </form>
