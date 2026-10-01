@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Calendar from "../components/calendar/Calendar";
-import { ChevronDown, ArrowLeft, ArrowRight } from "lucide-react";
+import { ChevronDown, ArrowLeft, ArrowRight, Calendar as CalendarIcon } from "lucide-react";
 import MaterialRequestDetailsModal from "../components/materials/MaterialRequestDetailsModal";
 import AddDeliveryDrawer from "../components/materials/AddDeliveryDrawer";
 import { useQuery } from "@tanstack/react-query";
@@ -94,7 +94,10 @@ export default function Projects() {
   const [limit, setLimit] = useState(10);
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [selectedCalendarProjectId, setSelectedCalendarProjectId] = useState<string>("");
+  const [selectedCalendarProjectId, setSelectedCalendarProjectId] = useState<string>(
+    searchParams.get("projectId") || ""
+  );
+  const [selectedProjectObj, setSelectedProjectObj] = useState<Project | null>(null);
 
   // Query for paginated projects list with hasDelivery=true
   const { data, isLoading, error } = useQuery({
@@ -108,10 +111,10 @@ export default function Projects() {
     enabled: activeTab === "project",
   });
 
-  // Query for calendar dropdown projects list (projects with deliveries)
+  // Query for calendar dropdown projects list (all projects so user can view any project)
   const { data: dropdownData } = useQuery({
-    queryKey: ["projects-dropdown", true],
-    queryFn: () => getProjectsApi({ page: 1, limit: 100, hasDelivery: true }),
+    queryKey: ["projects-dropdown"],
+    queryFn: () => getProjectsApi({ page: 1, limit: 100 }),
     enabled: activeTab === "calendar",
   });
 
@@ -121,9 +124,12 @@ export default function Projects() {
   const totalPages = Math.ceil(total / limit) || 1;
 
   const dropdownProjects = dropdownData?.data?.data?.projects || [];
-  const selectedProjObj = dropdownProjects.find(
-    (p: Project) => p._id === selectedCalendarProjectId
-  );
+  const selectedProjObj =
+    selectedProjectObj ||
+    dropdownProjects.find(
+      (p: Project) => p._id === selectedCalendarProjectId || p.leadId === selectedCalendarProjectId
+    ) ||
+    null;
   const leadIdToPass = selectedProjObj?.leadId || selectedCalendarProjectId || "";
 
   const handleViewProject = (project: Project) => {
@@ -194,10 +200,17 @@ export default function Projects() {
             <span className="text-sm font-semibold text-gray-800">Project</span>
             <ProjectSelector
               value={selectedCalendarProjectId}
-              onChange={setSelectedCalendarProjectId}
+              onChange={(val, proj) => {
+                setSelectedCalendarProjectId(val);
+                setSelectedProjectObj(proj || null);
+                if (val) {
+                  setSearchParams({ tab: "calendar", projectId: val });
+                } else {
+                  setSearchParams({ tab: "calendar" });
+                }
+              }}
               showAllOption
               width="320px"
-              hasDelivery={true}
             />
           </div>
           <button
@@ -211,7 +224,16 @@ export default function Projects() {
 
       {activeTab === "calendar" ? (
         <div className="min-h-150">
-          <Calendar leadId={leadIdToPass} />
+          <Calendar
+            leadId={leadIdToPass}
+            projectId={selectedCalendarProjectId}
+            selectedProject={selectedProjObj}
+            onClearProject={() => {
+              setSelectedCalendarProjectId("");
+              setSelectedProjectObj(null);
+              setSearchParams({ tab: "calendar" });
+            }}
+          />
         </div>
       ) : (
         <div className="space-y-4">
@@ -314,12 +336,27 @@ export default function Projects() {
 
                         {/* Actions */}
                         <td className="px-6 py-4 text-center whitespace-nowrap">
-                          <button
-                            onClick={() => handleViewProject(project)}
-                            className="px-5 py-1 bg-white border border-gray-200 rounded text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-2xs cursor-pointer"
-                          >
-                            View
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedCalendarProjectId(project._id);
+                                setSelectedProjectObj(project);
+                                setActiveTab("calendar");
+                                setSearchParams({ tab: "calendar", projectId: project._id });
+                              }}
+                              className="px-3 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-semibold text-blue-600 hover:bg-blue-100 transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
+                              title="View in Calendar"
+                            >
+                              <CalendarIcon className="w-3.5 h-3.5" />
+                              <span>Calendar</span>
+                            </button>
+                            <button
+                              onClick={() => handleViewProject(project)}
+                              className="px-4 py-1 bg-white border border-gray-200 rounded text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-2xs cursor-pointer"
+                            >
+                              View
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -395,7 +432,11 @@ export default function Projects() {
         </div>
       )}
 
-      <AddDeliveryDrawer open={toggle} onClose={() => setToggle(false)} />
+      <AddDeliveryDrawer
+        open={toggle}
+        onClose={() => setToggle(false)}
+        leadId={leadIdToPass || undefined}
+      />
 
       <MaterialRequestDetailsModal
         open={showDetails}

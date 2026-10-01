@@ -9,6 +9,7 @@ import ErrorBoundary, { RouterErrorFallback } from "../pages/ErrorPage";
 const Dashboard = lazy(() => import("../app/Dashboard"));
 const Projects = lazy(() => import("../app/Projects"));
 const Tasks = lazy(() => import("../app/Tasks"));
+const DailyWorkLogs = lazy(() => import("../app/DailyWorkLogs"));
 const Materials = lazy(() => import("../app/Materials"));
 const Reports = lazy(() => import("../app/Reports"));
 const Communication = lazy(() => import("../app/Communication"));
@@ -71,6 +72,8 @@ const AppRoutes = () => {
               <Route path="/project-details" element={<ProjectViewPage />} />
               <Route path="/drawing-attachment" element={<DrawingAttachment />} />
               <Route path="/tasks" element={<Tasks />} />
+              <Route path="/tasks/work-logs" element={<DailyWorkLogs />} />
+              <Route path="/work-logs" element={<DailyWorkLogs />} />
               <Route path="/materials" element={<Materials />} />
               <Route path="/material-view-page" element={<MaterialsViewPage />} />
               <Route path="/reports" element={<Reports />} />

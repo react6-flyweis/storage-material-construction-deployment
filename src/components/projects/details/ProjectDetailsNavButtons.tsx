@@ -6,6 +6,7 @@ interface ProjectDetailsNavButtonsProps {
   onViewDrawings?: () => void;
   onMaterialDelivery?: () => void;
   onBundleScan?: () => void;
+  onDailyWorkLogs?: () => void;
 }
 
 export const ProjectDetailsNavButtons: React.FC<ProjectDetailsNavButtonsProps> = ({
@@ -13,16 +14,18 @@ export const ProjectDetailsNavButtons: React.FC<ProjectDetailsNavButtonsProps> =
   onViewDrawings,
   onMaterialDelivery,
   onBundleScan,
+  onDailyWorkLogs,
 }) => {
   const buttons = [
     { label: "View BOM", onClick: onViewBOM },
     { label: "View Drawings & Photos", onClick: onViewDrawings },
     { label: "Material Delivery", onClick: onMaterialDelivery },
+    { label: "Daily Work Logs", onClick: onDailyWorkLogs },
     { label: "Bundle Scan", onClick: onBundleScan },
-  ];
+  ].filter((btn) => Boolean(btn.onClick));
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 w-full">
+    <div className={`grid grid-cols-2 ${buttons.length >= 5 ? "md:grid-cols-5" : "md:grid-cols-4"} gap-3 sm:gap-4 w-full`}>
       {buttons.map((btn) => (
         <Button
           key={btn.label}

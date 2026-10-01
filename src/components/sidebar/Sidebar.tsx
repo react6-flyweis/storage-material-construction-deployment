@@ -55,6 +55,10 @@ const SIDEBAR_TABS: SidebarTab[] = [
     path: "/tasks",
     label: "Tasks & Progress",
     bg: "#FD8D5B",
+    subTabs: [
+      { label: "Task Board", path: "/tasks" },
+      { label: "Daily Work Logs", path: "/work-logs" },
+    ],
   },
   {
     key: "materials",

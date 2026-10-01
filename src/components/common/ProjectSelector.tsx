@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { getProjectsApi } from "../../api/projects.api";
 import CustomSelect from "./CustomSelect";
+import type { Project } from "../../types/projects.types";
 
 interface ProjectSelectorProps {
   value: string;
-  onChange: (val: string) => void;
+  onChange: (val: string, project?: Project) => void;
   showAllOption?: boolean;
   width?: string;
   hasDelivery?: boolean;
@@ -41,7 +42,12 @@ export default function ProjectSelector({
       title="Select Project"
       options={options}
       value={effectiveValue}
-      onChange={onChange}
+      onChange={(val) => {
+        const selectedProj = projects.find(
+          (p: Project) => p._id === val || (p.leadId && p.leadId === val)
+        );
+        onChange(val, selectedProj);
+      }}
       width={width}
       searchable
       loading={isLoading}

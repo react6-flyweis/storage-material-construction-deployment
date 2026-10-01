@@ -275,6 +275,7 @@ export default function ProjectViewPage() {
         onViewBOM={() => navigate(`/projects/${projectId}/view-bom`)}
         onViewDrawings={() => navigate(`/projects/${projectId}/view-drawings`)}
         onMaterialDelivery={() => navigate(`/projects/${projectId}/material-delivery`)}
+        onDailyWorkLogs={() => navigate(`/work-logs?leadId=${projectId}`)}
         onBundleScan={() => setScanOpen(true)}
       />
 
