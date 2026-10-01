@@ -728,6 +728,9 @@ export interface MaterialRequest {
   priority: string;
   status: string;
   totalAmount: number;
+  reviewNotes?: string;
+  notes?: string;
+  remarks?: string;
 }
 
 export interface MaterialRequestStats {
@@ -1160,3 +1163,52 @@ export interface CreateDeliveryApiResponse {
     delivery: CreatedDeliveryData;
   };
 }
+
+export interface WorkLogProject {
+  _id: string;
+  projectName?: string;
+  jobId?: string;
+}
+
+export interface WorkLogTask {
+  _id: string;
+  title: string;
+}
+
+export interface WorkLogLoggedBy {
+  _id: string;
+  name?: string;
+  email?: string;
+}
+
+export interface WorkLogItem {
+  _id: string;
+  leadId: WorkLogProject | string;
+  taskId?: WorkLogTask | string | null;
+  loggedBy?: WorkLogLoggedBy | string;
+  date: string;
+  progress?: number;
+  description?: string;
+  photos?: string[];
+  issues?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface WorkLogsResponseData {
+  logs: WorkLogItem[];
+  total: number;
+}
+
+export interface WorkLogsApiResponse {
+  success: boolean;
+  message: string;
+  data: WorkLogsResponseData;
+}
+
+export interface GetWorkLogsParams {
+  leadId?: string;
+  page?: number;
+  limit?: number;
+}
+
