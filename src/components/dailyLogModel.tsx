@@ -11,10 +11,17 @@ import Modal from "./common/Modal";
 import { uploadFileToS3 } from "../lib/upload";
 import { X, Loader2 } from "lucide-react";
 
+export interface DailyLogSubmissionData {
+  task: string;
+  project: string;
+  description: string;
+  progress: number;
+}
+
 type DailyLogModalProps = {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: DailyLogSubmissionData) => void;
   defaultLeadId?: string;
 };
 
@@ -22,12 +29,17 @@ const dailyWorkLogSchema = z.object({
   date: z.string().min(1, "Date is required"),
   selectedProject: z.string().min(1, "Project is required"),
   taskId: z.string().nullable().optional(),
-  progress: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? 0 : Number(val)),
-    z.number({ error: "Progress must be a number" })
-      .min(0, "Progress must be at least 0")
-      .max(100, "Progress cannot exceed 100")
-  ).optional(),
+  progress: z
+    .union([z.number(), z.string()])
+    .optional()
+    .refine(
+      (val) => {
+        if (val === undefined || val === null || val === "") return true;
+        const num = Number(val);
+        return !isNaN(num) && num >= 0 && num <= 100;
+      },
+      { message: "Progress must be between 0 and 100" }
+    ),
   description: z.string().min(1, "Description is required"),
   issues: z.string().optional(),
 });
@@ -164,7 +176,12 @@ export default function DailyLogModel({
       leadId: values.selectedProject,
       taskId: values.taskId === "null" ? null : (values.taskId || null),
       date: values.date,
-      progress: typeof values.progress === "number" ? values.progress : 0,
+      progress:
+        typeof values.progress === "number"
+          ? values.progress
+          : !isNaN(Number(values.progress))
+          ? Number(values.progress)
+          : 0,
       description: values.description,
       photos: photoUrls,
       issues: values.issues || "",
