@@ -52,191 +52,6 @@ const formatLength = (length?: number) => {
   return `${Number(length.toFixed(2))} ft`;
 };
 
-// Fallback mockup bundles to match the UI precisely if backend has no records
-const defaultBundles: BundleLabel[] = [
-  {
-    bundleId: "BND-001",
-    bundleNo: "BND-001",
-    loadId: "LOAD-001",
-    parts: "STL-B12",
-    totalWeight: 18500,
-    maxLengthFeet: 20,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-002",
-    bundleNo: "BND-002",
-    loadId: "LOAD-002",
-    parts: "STL-B13",
-    totalWeight: 37700,
-    maxLengthFeet: 30,
-    status: "printed",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-003",
-    bundleNo: "BND-003",
-    loadId: "LOAD-003",
-    parts: "STL-B14",
-    totalWeight: 21400,
-    maxLengthFeet: 20,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-004",
-    bundleNo: "BND-004",
-    loadId: "LOAD-004",
-    parts: "STL-B12",
-    totalWeight: 18500,
-    maxLengthFeet: 30,
-    status: "printed",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-005",
-    bundleNo: "BND-005",
-    loadId: "LOAD-005",
-    parts: "STL-B12",
-    totalWeight: 37700,
-    maxLengthFeet: 20,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-006",
-    bundleNo: "BND-006",
-    loadId: "LOAD-006",
-    parts: "STL-B12",
-    totalWeight: 21400,
-    maxLengthFeet: 30,
-    status: "printed",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-007",
-    bundleNo: "BND-007",
-    loadId: "LOAD-007",
-    parts: "STL-B12",
-    totalWeight: 18500,
-    maxLengthFeet: 20,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-008",
-    bundleNo: "BND-008",
-    loadId: "LOAD-008",
-    parts: "STL-B12",
-    totalWeight: 37700,
-    maxLengthFeet: 30,
-    status: "printed",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-009",
-    bundleNo: "BND-009",
-    loadId: "LOAD-009",
-    parts: "STL-B12",
-    totalWeight: 21400,
-    maxLengthFeet: 20,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-010",
-    bundleNo: "BND-010",
-    loadId: "LOAD-010",
-    parts: "STL-B12",
-    totalWeight: 18500,
-    maxLengthFeet: 30,
-    status: "printed",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-011",
-    bundleNo: "BND-011",
-    loadId: "LOAD-011",
-    parts: "STL-B12",
-    totalWeight: 37700,
-    maxLengthFeet: 20,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-012",
-    bundleNo: "BND-012",
-    loadId: "LOAD-012",
-    parts: "STL-B12",
-    totalWeight: 21400,
-    maxLengthFeet: 30,
-    status: "printed",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-013",
-    bundleNo: "BND-013",
-    loadId: "LOAD-013",
-    parts: "STL-B12",
-    totalWeight: 18500,
-    maxLengthFeet: 20,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-  {
-    bundleId: "BND-014",
-    bundleNo: "BND-014",
-    loadId: "LOAD-014",
-    parts: "STL-B12",
-    totalWeight: 37700,
-    maxLengthFeet: 30,
-    status: "pending",
-    title: "",
-    bundleType: "",
-    packingListId: "",
-    project: { projectName: "Project Alpha", jobId: "JOB-001" },
-  },
-];
 
 export default function LabelPrinting() {
   const [page, setPage] = useState(1);
@@ -288,7 +103,7 @@ export default function LabelPrinting() {
   const {
     data: apiData,
     isLoading,
-    error,
+    isError,
   } = useQuery({
     queryKey: ["labels", page, limit, debouncedSearch, sortBy, statusFilter],
     queryFn: () =>
@@ -302,19 +117,12 @@ export default function LabelPrinting() {
     select: (data) => data.data.data,
   });
 
-  const apiBundles = apiData?.bundles;
-  const bundles =
-    apiBundles && apiBundles.length > 0
-      ? apiBundles
-      : !isLoading && !error
-        ? defaultBundles
-        : defaultBundles;
-
-  const total = apiData?.total || 14;
+  const bundles = apiData?.bundles || [];
+  const total = apiData?.total ?? bundles.length;
   const apiStats = apiData?.stats;
   const enums = apiData?.enums;
 
-  const totalPages = Math.ceil(total / limit) || 15;
+  const totalPages = Math.ceil(total / limit) || 1;
 
   // Build status options from enums or defaults
   const statusOptions = useMemo(() => {
@@ -421,7 +229,7 @@ export default function LabelPrinting() {
   const statCards = [
     {
       title: "Total Bundles",
-      value: apiStats?.totalBundles ?? 58,
+      value: apiStats?.totalBundles ?? 0,
       trend: "5.62%",
       isUp: true,
       circleBg: "bg-[#6366F1]",
@@ -446,7 +254,7 @@ export default function LabelPrinting() {
     },
     {
       title: "Labels Printed",
-      value: apiStats?.labelsPrinted ?? 52,
+      value: apiStats?.labelsPrinted ?? 0,
       trend: "11.4%",
       isUp: true,
       circleBg: "bg-[#10B981]",
@@ -456,7 +264,7 @@ export default function LabelPrinting() {
     },
     {
       title: "Labels Pending",
-      value: apiStats?.labelsPending ?? 6,
+      value: apiStats?.labelsPending ?? 0,
       trend: "8.52%",
       isUp: true,
       circleBg: "bg-[#F59E0B]",
@@ -466,7 +274,7 @@ export default function LabelPrinting() {
     },
     {
       title: "Labels Printed Today",
-      value: apiStats?.labelsPrintedToday ?? 4,
+      value: apiStats?.labelsPrintedToday ?? 0,
       trend: "7.45%",
       isUp: false,
       circleBg: "bg-[#EF4444]",
@@ -686,6 +494,15 @@ export default function LabelPrinting() {
                       <Loader2 className="w-4 h-4 animate-spin text-[#6366F1]" />
                       <span>Loading labels...</span>
                     </div>
+                  </td>
+                </tr>
+              ) : isError ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-5 py-10 text-center text-xs text-red-500 font-medium"
+                  >
+                    Failed to load labels. Please try again.
                   </td>
                 </tr>
               ) : bundles.length === 0 ? (

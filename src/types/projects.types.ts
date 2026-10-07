@@ -393,7 +393,7 @@ export interface DeliveriesApiResponse {
 }
 
 export interface BundleProject {
-  leadId: string;
+  leadId?: string;
   projectName: string;
   jobId: string;
 }
