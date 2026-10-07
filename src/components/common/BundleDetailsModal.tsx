@@ -12,6 +12,8 @@ import {
 import ReportMismatchModal from "./ReportMismatchModal";
 import SuccessModal from "./SuccessModal";
 import Modal from "./Modal";
+import QRCodeDataModal from "./QRCodeDataModal";
+import { getQRCodeUrl, formatValue } from "../../lib/utils";
 
 type BundleDetailsModalProps = {
   open: boolean;
@@ -23,6 +25,7 @@ type BundleDetailsModalProps = {
 export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: BundleDetailsModalProps) {
   const queryClient = useQueryClient();
   const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successModalTitle, setSuccessModalTitle] = useState("");
 
@@ -39,8 +42,9 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
       setSuccessModalTitle("Bundle Verified Successfully!");
       setSuccessModalOpen(true);
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to verify bundle");
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error?.response?.data?.message || "Failed to verify bundle");
     },
   });
 
@@ -75,14 +79,41 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
       setSuccessModalTitle("Label Reprinted Successfully!");
       setSuccessModalOpen(true);
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to reprint label");
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error?.response?.data?.message || "Failed to reprint label");
     },
   });
 
   if (!open) return null;
 
   const bundle = response?.data?.data?.bundle;
+
+  const targetBundleId = bundle?.bundleId || bundleId || bundle?.bundleNo || "";
+  const partsList =
+    bundle?.items
+      ?.map((item) => item.partCode)
+      .filter(Boolean)
+      .join(", ") || "";
+
+  const qrDataObj = bundle
+    ? {
+        project: (bundle.project?.projectName || "").replace(/\s+/g, ""),
+        shipper: bundle.project?.jobId || "",
+        load_id: bundle.packingList?.packingListNo || "",
+        bundle_id: bundle.bundleNo || targetBundleId,
+        parts: partsList.replace(/\s+/g, ""),
+        weight: formatValue(bundle.totalWeight),
+        length: formatValue(bundle.maxLengthFeet),
+      }
+    : "";
+
+  const standaloneBase = import.meta.env.VITE_STANDLONE_PAGE_BASE || "";
+  const qrCodeUrl = targetBundleId
+    ? getQRCodeUrl(`${standaloneBase.replace(/\/+$/, "")}/bundle/${targetBundleId}`, "250x250")
+    : bundle
+    ? getQRCodeUrl(qrDataObj, "250x250")
+    : "";
 
   const formatStatus = (status?: string) => {
     if (!status) return "-";
@@ -244,28 +275,22 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">Scanned QR Code</h3>
                   <div className="flex items-start gap-6">
-                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="border border-gray-200 p-2 rounded-lg bg-white shadow-sm flex-shrink-0">
-                      <rect x="10" y="10" width="30" height="30" stroke="black" strokeWidth="6" fill="none" />
-                      <rect x="18" y="18" width="14" height="14" fill="black" />
-
-                      <rect x="80" y="10" width="30" height="30" stroke="black" strokeWidth="6" fill="none" />
-                      <rect x="88" y="18" width="14" height="14" fill="black" />
-
-                      <rect x="10" y="80" width="30" height="30" stroke="black" strokeWidth="6" fill="none" />
-                      <rect x="18" y="88" width="14" height="14" fill="black" />
-
-                      <rect x="50" y="20" width="10" height="10" fill="black" />
-                      <rect x="60" y="35" width="10" height="10" fill="black" />
-                      <rect x="20" y="55" width="10" height="15" fill="black" />
-                      <rect x="40" y="50" width="15" height="10" fill="black" />
-                      <rect x="55" y="65" width="10" height="10" fill="black" />
-                      <rect x="85" y="55" width="10" height="10" fill="black" />
-                      <rect x="95" y="70" width="15" height="10" fill="black" />
-                      <rect x="70" y="80" width="10" height="10" fill="black" />
-                      <rect x="60" y="95" width="15" height="15" fill="black" />
-                      <rect x="85" y="90" width="10" height="10" fill="black" />
-                      <rect x="100" y="95" width="10" height="10" fill="black" />
-                    </svg>
+                    <button
+                      type="button"
+                      onClick={() => setIsQrModalOpen(true)}
+                      className="w-30 h-30 border border-gray-200 p-2 rounded-lg bg-white shadow-sm shrink-0 flex items-center justify-center hover:border-purple-300 hover:shadow-md transition-all group relative cursor-pointer"
+                      title="Click to view QR label preview"
+                    >
+                      {qrCodeUrl ? (
+                        <img
+                          src={qrCodeUrl}
+                          alt={`QR Code for bundle ${bundle.bundleNo || bundleId}`}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-xs text-gray-400 font-medium">No QR Code</div>
+                      )}
+                    </button>
 
                     <div className="flex-1 min-w-0">
                       <h4 className="text-base font-bold text-gray-900 mb-2 truncate">project={bundle.project?.projectName?.replace(/\s+/g, '') || "-"}</h4>
@@ -377,6 +402,24 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
         title={successModalTitle}
         onClose={() => setSuccessModalOpen(false)}
       />
+
+      {/* QR Code Data Modal */}
+      {bundle && (
+        <QRCodeDataModal
+          open={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          data={{
+            projectName: bundle.project?.projectName || "",
+            shipperRef: bundle.project?.jobId || "",
+            loadId: bundle.packingList?.packingListNo || "",
+            id: bundle.bundleNo || targetBundleId,
+            parts: partsList,
+            weight: bundle.totalWeight,
+            length: bundle.maxLengthFeet,
+            bundleId: targetBundleId,
+          }}
+        />
+      )}
     </>
   );
 }
