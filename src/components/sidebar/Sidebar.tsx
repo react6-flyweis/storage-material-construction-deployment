@@ -164,7 +164,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
           transform transition-all duration-300 ease-in-out
           ${open ? "translate-x-0" : "-translate-x-full lg:static lg:translate-x-0"}
           flex shadow-xl shrink-0
-          ${isCollapsed ? "w-[67px]" : "w-[280px] sm:w-[258px]"}
+          ${isCollapsed ? "w-[67px]" : "w-[280px]"}
         `}
       >
         {/* Left Icon Strip */}
@@ -284,7 +284,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
           className={`flex-1 transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0 invisible" : "w-auto opacity-100 visible"
             }`}
         >
-          <div className="pl-5 py-[14px] min-w-[191px]">
+          <div className="pl-4 pr-3.5 py-[14px] min-w-[200px]">
             <div className="mb-4 pr-2">
               <h1 className="text-[17px] font-bold text-[#1D51A4]">
                 Construction Panel
@@ -307,7 +307,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1 pr-4">
+            <div className="flex flex-col gap-1.5 w-full">
               {SIDEBAR_TABS.map((tab) => {
                 const isTabActive = activeTab === tab.key;
                 if (!isTabActive) return null;
@@ -324,6 +324,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                               if (window.innerWidth < 1024) setOpen(false);
                               navigate(sub.path);
                             }}
+                            title={sub.label}
                             style={
                               isSubActive
                                 ? {
@@ -338,9 +339,11 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                                   boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                                 }
                             }
-                            className="h-[44px] w-full px-4 rounded-xl text-sm font-bold transition-all flex items-center border-2"
+                            className="min-h-[42px] w-full px-3.5 py-2.5 rounded-md text-[13.5px] font-semibold transition-all flex items-center justify-start text-left border-2 leading-tight"
                           >
-                            {sub.label}
+                            <span className="truncate whitespace-nowrap text-left">
+                              {sub.label}
+                            </span>
                           </button>
                         );
                       })
@@ -350,14 +353,17 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                           if (window.innerWidth < 1024) setOpen(false);
                           navigate(tab.path);
                         }}
+                        title={tab.label}
                         style={{
                           backgroundColor: tab.bg,
                           color: "#ffffff",
                           borderColor: tab.bg,
                         }}
-                        className="h-[44px] w-full px-4 rounded-xl shadow-sm text-sm font-bold flex items-center border-2"
+                        className="min-h-[42px] w-full px-3.5 py-2.5 rounded-md shadow-sm text-[13.5px] font-semibold flex items-center justify-start text-left border-2 leading-tight"
                       >
-                        {tab.label}
+                        <span className="truncate whitespace-nowrap text-left">
+                          {tab.label}
+                        </span>
                       </button>
                     )}
                   </div>
