@@ -1,22 +1,27 @@
 import CardHeader from "./CardHeader";
-import { formatDateDisplay, getDeliveryStatusBadgeClass } from "../../utils/dashboard.utils";
+import {
+  formatDateDisplay,
+  getDeliveryStatusBadgeClass,
+} from "../../utils/dashboard.utils";
 import type { DashboardActiveSite } from "../../types/projects.types";
+import { useNavigate } from "react-router-dom";
 
 interface ActiveConstructionSitesProps {
   sites: DashboardActiveSite[];
   isLoading?: boolean;
-  onViewAll?: () => void;
   className?: string;
 }
 
 export default function ActiveConstructionSites({
   sites,
   isLoading = false,
-  onViewAll,
   className = "lg:col-span-2",
 }: ActiveConstructionSitesProps) {
+  const navigate = useNavigate();
   return (
-    <div className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}>
+    <div
+      className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}
+    >
       <CardHeader
         title="Active Construction Sites"
         badge={
@@ -24,13 +29,13 @@ export default function ActiveConstructionSites({
             {sites.length} Sites
           </span>
         }
-        onViewAll={onViewAll}
+        onViewAll={() => navigate("/delivery-tracking")}
       />
 
-      <div className="p-6 flex-1 flex flex-col">
-        <div className="flex-1 overflow-auto max-h-90">
+      <div className="flex-1 flex flex-col">
+        <div className="flex-1 overflow-y-scroll">
           <table className="w-full text-left">
-            <thead className="bg-gray-50/80 sticky top-0 z-10">
+            <thead className="bg-gray-50/80  top-0 z-10">
               <tr className="text-[11px] font-bold text-gray-900 border-b border-gray-100 uppercase tracking-wider">
                 <th className="py-3 pl-4 pr-2 rounded-tl">Project</th>
                 <th className="py-3 pr-2">Progress</th>
@@ -59,19 +64,28 @@ export default function ActiveConstructionSites({
                 ))
               ) : sites.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-xs font-medium text-gray-400">
+                  <td
+                    colSpan={4}
+                    className="py-12 text-center text-xs font-medium text-gray-400"
+                  >
                     No active construction site data available
                   </td>
                 </tr>
               ) : (
-                sites.map((site, idx) => (
-                  <tr key={site.leadId || idx} className="hover:bg-gray-50/60 transition-colors">
+                sites.slice(0, 4).map((site, idx) => (
+                  <tr
+                    key={site.leadId || idx}
+                    className="hover:bg-gray-50/60 transition-colors"
+                  >
                     <td className="py-3 pl-4 pr-2">
                       <p className="text-sm font-bold text-gray-900 leading-snug">
                         {site.projectName || "Unnamed Project"}
                       </p>
                       <p className="text-[11px] text-gray-400 font-medium">
-                        {site.site || "N/A"} <span className="text-orange-500 font-semibold">• {site.jobId}</span>
+                        {site.site || "N/A"}{" "}
+                        <span className="text-orange-500 font-semibold">
+                          • {site.jobId}
+                        </span>
                         {site.buildingType ? ` • ${site.buildingType}` : ""}
                       </p>
                     </td>
@@ -80,7 +94,9 @@ export default function ActiveConstructionSites({
                         <div className="w-16 bg-gray-100 rounded-full h-2 overflow-hidden">
                           <div
                             className="bg-blue-600 h-full rounded-full transition-all"
-                            style={{ width: `${Math.min(100, Math.max(0, site.progressPct ?? 0))}%` }}
+                            style={{
+                              width: `${Math.min(100, Math.max(0, site.progressPct ?? 0))}%`,
+                            }}
                           />
                         </div>
                         <span className="text-xs font-bold text-gray-700">
@@ -94,7 +110,7 @@ export default function ActiveConstructionSites({
                     <td className="py-3 pr-4">
                       <span
                         className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getDeliveryStatusBadgeClass(
-                          site.deliveryStatus
+                          site.deliveryStatus,
                         )}`}
                       >
                         {site.deliveryStatus || "N/A"}
