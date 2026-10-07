@@ -409,6 +409,8 @@ export interface BundleLabel {
   status: string;
   labelPrinted?: boolean;
   packingListId: string;
+  loadId?: string;
+  loadLabel?: string;
   project: BundleProject;
 }
 
