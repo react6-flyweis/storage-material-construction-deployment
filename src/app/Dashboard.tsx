@@ -10,14 +10,21 @@ import RecentActivity from "../components/common/RecentActivity";
 import ExportIcon from "../assets/exportIcon.svg";
 import SuccessModal from "../components/common/SuccessModal";
 import CustomSelect from "../components/common/CustomSelect";
-import { ClockPlus, CalendarPlus, CalendarCheck2, FileText, Truck, Compass, TrendingUp } from "lucide-react";
+import {
+  ClockPlus,
+  CalendarPlus,
+  CalendarCheck2,
+  FileText,
+  Truck,
+  Compass,
+  TrendingUp,
+} from "lucide-react";
 import {
   ActiveConstructionSites,
   UpcomingDeadlines,
   FreightCarriers,
 } from "../components/dashboard";
 import { formatDateDisplay, formatStatusLabel } from "../utils/dashboard.utils";
-
 
 export default function Dashboard() {
   const [successOpen, setSuccessOpen] = useState(false);
@@ -35,7 +42,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dateDropdownRef.current && !dateDropdownRef.current.contains(e.target as Node)) {
+      if (
+        dateDropdownRef.current &&
+        !dateDropdownRef.current.contains(e.target as Node)
+      ) {
         setDateDropdownOpen(false);
       }
     };
@@ -120,7 +130,9 @@ export default function Dashboard() {
     setDateDropdownOpen(false);
   };
 
-  const handleDatePreset = (preset: "today" | "last7" | "last30" | "month" | "clear") => {
+  const handleDatePreset = (
+    preset: "today" | "last7" | "last30" | "month" | "clear",
+  ) => {
     if (preset === "clear") {
       setFromDate("");
       setToDate("");
@@ -172,7 +184,9 @@ export default function Dashboard() {
       title: "Delayed",
       value: isLoading ? "..." : (projectStats?.delayed ?? 0),
       iconBg: "#2563EB",
-      iconsvg: <CalendarPlus size={18} className="text-white" strokeWidth={2.2} />,
+      iconsvg: (
+        <CalendarPlus size={18} className="text-white" strokeWidth={2.2} />
+      ),
       trend: {
         value: `${projectStats?.delayedPct ?? 0}%`,
         label: "delayed",
@@ -184,7 +198,9 @@ export default function Dashboard() {
       title: "Completed",
       value: isLoading ? "..." : (projectStats?.completed ?? 0),
       iconBg: "#E91E63",
-      iconsvg: <CalendarCheck2 size={18} className="text-white" strokeWidth={2.2} />,
+      iconsvg: (
+        <CalendarCheck2 size={18} className="text-white" strokeWidth={2.2} />
+      ),
       trend: {
         value: `${projectStats?.completedPct ?? 0}%`,
         label: "completed",
@@ -266,7 +282,9 @@ export default function Dashboard() {
       value: materialOverview?.urgent ?? 0,
       displayValue: `${
         materialOverview?.total
-          ? Math.round(((materialOverview.urgent ?? 0) / materialOverview.total) * 1000) / 10
+          ? Math.round(
+              ((materialOverview.urgent ?? 0) / materialOverview.total) * 1000,
+            ) / 10
           : 0
       }%`,
       name: "Urgent Requests",
@@ -283,14 +301,18 @@ export default function Dashboard() {
         status: (step.status?.toLowerCase() === "completed"
           ? "completed"
           : step.status?.toLowerCase() === "inprogress"
-          ? "inprogress"
-          : "upcoming") as "completed" | "inprogress" | "upcoming",
+            ? "inprogress"
+            : "upcoming") as "completed" | "inprogress" | "upcoming",
       }));
     }
     return [
       { title: "Planning", date: "14/01/2024", status: "completed" as const },
       { title: "Design", date: "14/01/2024", status: "completed" as const },
-      { title: "Procurement", date: "14/01/2024", status: "completed" as const },
+      {
+        title: "Procurement",
+        date: "14/01/2024",
+        status: "completed" as const,
+      },
       { title: "Execution", date: "14/01/2024", status: "inprogress" as const },
       { title: "Handover", date: "14/01/2024", status: "upcoming" as const },
     ];
@@ -301,14 +323,20 @@ export default function Dashboard() {
     const list = dashboardData?.recentActivity || [];
     return list.slice(0, 5).map((item, idx) => {
       let iconBg = "#E8F1FD";
-      let icon = <FileText size={18} className="text-blue-500" strokeWidth={2} />;
+      let icon = (
+        <FileText size={18} className="text-blue-500" strokeWidth={2} />
+      );
 
       if (item.type === "audit") {
         iconBg = "#F1EAFA";
-        icon = <Compass size={18} className="text-purple-500" strokeWidth={2} />;
+        icon = (
+          <Compass size={18} className="text-purple-500" strokeWidth={2} />
+        );
       } else if (item.type === "production") {
         iconBg = "#FFF0E6";
-        icon = <TrendingUp size={18} className="text-orange-500" strokeWidth={2} />;
+        icon = (
+          <TrendingUp size={18} className="text-orange-500" strokeWidth={2} />
+        );
       } else if (item.type === "order" || item.type === "delivery") {
         iconBg = "#E8F8F0";
         icon = <Truck size={18} className="text-emerald-500" strokeWidth={2} />;
@@ -380,7 +408,9 @@ export default function Dashboard() {
             onChange={(val) => {
               setSelectedProject(val);
               if (val && selectedBuilding) {
-                const b = filterBuildings.find((item) => item._id === selectedBuilding);
+                const b = filterBuildings.find(
+                  (item) => item._id === selectedBuilding,
+                );
                 if (b && b.leadId !== val) {
                   setSelectedBuilding("");
                 }
@@ -427,12 +457,17 @@ export default function Dashboard() {
         </div>
 
         {/* Date Range Selector with Popover */}
-        <div ref={dateDropdownRef} className="relative w-full xl:w-auto xl:flex-1 min-w-[220px]">
+        <div
+          ref={dateDropdownRef}
+          className="relative w-full xl:w-auto xl:flex-1 min-w-[220px]"
+        >
           <button
             type="button"
             onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
             className={`bg-white border rounded text-xs sm:text-sm font-medium flex items-center justify-between w-full h-[40px] px-4 shadow-sm hover:bg-gray-50 transition-colors ${
-              fromDate || toDate ? "border-blue-500 text-blue-700 font-semibold" : "border-gray-200 text-gray-700"
+              fromDate || toDate
+                ? "border-blue-500 text-blue-700 font-semibold"
+                : "border-gray-200 text-gray-700"
             }`}
           >
             <span className="truncate">{dateRangeButtonLabel}</span>
@@ -569,7 +604,11 @@ export default function Dashboard() {
           title="Delivery Overview"
           total={deliveryOverview?.total ?? 0}
           data={deliveryData}
-          subtitle={deliveryOverview?.scope === "today" ? "Today's Deliveries" : "Total Deliveries"}
+          subtitle={
+            deliveryOverview?.scope === "today"
+              ? "Today's Deliveries"
+              : "Total Deliveries"
+          }
         />
 
         {/* Material Request Overview Donut */}

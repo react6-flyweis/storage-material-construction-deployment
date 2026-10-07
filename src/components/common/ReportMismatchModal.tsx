@@ -75,7 +75,10 @@ export default function ReportMismatchModal({
           description: item.description || "-",
           qty: itemQty,
           color: item.color || "-",
-          receivedQty: existingMismatch?.receivedQty ?? itemQty,
+          receivedQty:
+            existingMismatch?.receivedQty != null
+              ? Math.min(itemQty, Math.max(0, existingMismatch.receivedQty))
+              : itemQty,
           status: (existingMismatch?.status as MismatchStatus) || MISMATCH_ITEM_STATUSES.RECEIVED,
         };
       });
@@ -116,7 +119,8 @@ export default function ReportMismatchModal({
           };
         }
 
-        const numVal = Math.max(0, Number(rawVal));
+        const maxQty = Math.max(0, item.qty);
+        const numVal = Math.min(maxQty, Math.max(0, Number(rawVal)));
 
         let newStatus: MismatchStatus = MISMATCH_ITEM_STATUSES.RECEIVED;
         if (numVal === 0) {
@@ -188,6 +192,13 @@ export default function ReportMismatchModal({
       if (isNaN(numReceived) || numReceived < 0) {
         toast.error(
           `Received quantity for "${item.partCode}" must be a non-negative number.`
+        );
+        return;
+      }
+
+      if (numReceived > item.qty) {
+        toast.error(
+          `Received quantity for "${item.partCode}" cannot exceed total quantity (${item.qty}).`
         );
         return;
       }
@@ -351,6 +362,7 @@ export default function ReportMismatchModal({
                             <input
                               type="number"
                               min="0"
+                              max={item.qty}
                               value={item.receivedQty}
                               onChange={(e) => handleQtyChange(item._id, e.target.value)}
                               className="w-24 px-3 py-1.5 border border-gray-200 rounded-lg text-center text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-[#8B5CF6] shadow-sm"

@@ -12,7 +12,10 @@ const siteContactSchema = z.object({
   contactName: z.string().min(1, "Please enter a contact name"),
   contactTitle: z.string().optional(),
   phone: z.string().min(1, "Please enter a phone number"),
-  email: z.string().min(1, "Please enter an email address").email("Please enter a valid email address"),
+  email: z
+    .string()
+    .min(1, "Please enter an email address")
+    .email("Please enter a valid email address"),
   availableHours: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -76,14 +79,17 @@ export default function UpdateSiteContactModal({
   }, [open, initialData, reset]);
 
   const mutation = useMutation({
-    mutationFn: (payload: SiteContactFormValues) => updateSiteContactApi(deliveryId!, payload),
+    mutationFn: (payload: SiteContactFormValues) =>
+      updateSiteContactApi(deliveryId!, payload),
     onSuccess: (res) => {
       toast.success(res.data?.message || "Site contact updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["deliveries"] });
       handleClose();
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to update site contact");
+      toast.error(
+        err?.response?.data?.message || "Failed to update site contact",
+      );
     },
   });
 
@@ -104,13 +110,15 @@ export default function UpdateSiteContactModal({
     <Modal
       open={open}
       onClose={handleClose}
-      containerClassName="max-w-[600px] p-0"
+      containerClassName="max-w-[600px] p-5"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         {/* Header */}
         <div className="flex items-start justify-between ">
           <div>
-            <h2 className="text-2xl font-bold text-[#111827] mb-1">Update Site Contact</h2>
+            <h2 className="text-2xl font-bold text-[#111827] mb-1">
+              Update Site Contact
+            </h2>
             <p className="text-sm font-medium text-gray-400">
               {deliveryNumber || deliveryId || "DEL-2001"}
               {projectName ? ` - ${projectName}` : ""}
@@ -135,16 +143,21 @@ export default function UpdateSiteContactModal({
               <input
                 type="text"
                 placeholder="Enter contact name"
-                className={`w-full h-[52px] rounded-xl border px-5 outline-none text-base placeholder:text-gray-400 focus:border-blue-500 transition-colors shadow-sm ${errors.contactName ? "border-red-500" : "border-gray-200"
-                  }`}
+                className={`w-full h-[52px] rounded-xl border px-5 outline-none text-base placeholder:text-gray-400 focus:border-blue-500 transition-colors shadow-sm ${
+                  errors.contactName ? "border-red-500" : "border-gray-200"
+                }`}
                 {...register("contactName")}
               />
               {errors.contactName && (
-                <p className="text-xs text-red-500 mt-1">{errors.contactName.message}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.contactName.message}
+                </p>
               )}
             </div>
             <div>
-              <label className="text-sm font-bold text-[#111827] mb-2.5 block">Contact Title</label>
+              <label className="text-sm font-bold text-[#111827] mb-2.5 block">
+                Contact Title
+              </label>
               <input
                 type="text"
                 placeholder="Enter job title"
@@ -159,12 +172,15 @@ export default function UpdateSiteContactModal({
               <input
                 type="text"
                 placeholder="(555) 123-4567"
-                className={`w-full h-[52px] rounded-xl border px-5 outline-none text-base placeholder:text-gray-400 focus:border-blue-500 transition-colors shadow-sm ${errors.phone ? "border-red-500" : "border-gray-200"
-                  }`}
+                className={`w-full h-[52px] rounded-xl border px-5 outline-none text-base placeholder:text-gray-400 focus:border-blue-500 transition-colors shadow-sm ${
+                  errors.phone ? "border-red-500" : "border-gray-200"
+                }`}
                 {...register("phone")}
               />
               {errors.phone && (
-                <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.phone.message}
+                </p>
               )}
             </div>
             <div>
@@ -174,18 +190,23 @@ export default function UpdateSiteContactModal({
               <input
                 type="text"
                 placeholder="contact@company.com"
-                className={`w-full h-[52px] rounded-xl border px-5 outline-none text-base placeholder:text-gray-400 focus:border-blue-500 transition-colors shadow-sm ${errors.email ? "border-red-500" : "border-gray-200"
-                  }`}
+                className={`w-full h-[52px] rounded-xl border px-5 outline-none text-base placeholder:text-gray-400 focus:border-blue-500 transition-colors shadow-sm ${
+                  errors.email ? "border-red-500" : "border-gray-200"
+                }`}
                 {...register("email")}
               />
               {errors.email && (
-                <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.email.message}
+                </p>
               )}
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-bold text-[#111827] mb-2.5 block">Available hours</label>
+            <label className="text-sm font-bold text-[#111827] mb-2.5 block">
+              Available hours
+            </label>
             <input
               type="text"
               placeholder="e.g., 7:00 AM - 5:00 PM, Mon-Fri"
@@ -195,7 +216,9 @@ export default function UpdateSiteContactModal({
           </div>
 
           <div>
-            <label className="text-sm font-bold text-[#111827] mb-2.5 block">Additional Notes</label>
+            <label className="text-sm font-bold text-[#111827] mb-2.5 block">
+              Additional Notes
+            </label>
             <textarea
               placeholder="Additional notes about this contact..."
               rows={4}
@@ -217,7 +240,9 @@ export default function UpdateSiteContactModal({
               disabled={mutation.isPending}
               className="flex items-center justify-center gap-2 px-6 py-3 bg-[#1D51A4] text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition-all shadow-md disabled:opacity-50"
             >
-              {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {mutation.isPending && (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              )}
               {mutation.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
@@ -226,5 +251,3 @@ export default function UpdateSiteContactModal({
     </Modal>
   );
 }
-
-

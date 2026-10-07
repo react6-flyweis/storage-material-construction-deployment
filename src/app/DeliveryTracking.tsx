@@ -48,7 +48,7 @@ const formatStatusText = (status?: string) => {
 export default function DeliveryTracking() {
   // Pagination & sorting
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(5);
   const [sortBy, setSortBy] = useState("Latest");
 
   // Search & Filters
@@ -70,14 +70,19 @@ export default function DeliveryTracking() {
   // Modals state
   const [updateContactOpen, setUpdateContactOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
-  const [scannedProjectId, setScannedProjectId] = useState<string | undefined>();
+  const [scannedProjectId, setScannedProjectId] = useState<
+    string | undefined
+  >();
   const [resultOpen, setResultOpen] = useState(false);
   const [scannedBundleId, setScannedBundleId] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedDetailId, setSelectedDetailId] = useState<string | null>(null);
   const [addDeliveryOpen, setAddDeliveryOpen] = useState(false);
   const [partialOpen, setPartialOpen] = useState(false);
-  const [selectedDelivery, setSelectedDelivery] = useState<{ id: string; number: string } | null>(null);
+  const [selectedDelivery, setSelectedDelivery] = useState<{
+    id: string;
+    number: string;
+  } | null>(null);
   const [selectedContactDelivery, setSelectedContactDelivery] = useState<{
     id: string;
     number: string;
@@ -143,7 +148,12 @@ export default function DeliveryTracking() {
 
   const queryClient = useQueryClient();
 
-  const { data: deliveriesData, isLoading, isError, error } = useQuery({
+  const {
+    data: deliveriesData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["deliveries", queryParams],
     queryFn: () => getDeliveriesApi(queryParams),
   });
@@ -155,20 +165,27 @@ export default function DeliveryTracking() {
       queryClient.invalidateQueries({ queryKey: ["deliveries"] });
     },
     onError: (err: unknown) => {
-      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const errorMsg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
       toast.error(errorMsg || "Failed to mark as received");
     },
   });
 
   const markPartialMutation = useMutation({
-    mutationFn: ({ deliveryId, notes }: { deliveryId: string; notes?: string }) =>
-      markDeliveryPartialApi(deliveryId, { notes }),
+    mutationFn: ({
+      deliveryId,
+      notes,
+    }: {
+      deliveryId: string;
+      notes?: string;
+    }) => markDeliveryPartialApi(deliveryId, { notes }),
     onSuccess: () => {
       toast.success("Delivery marked as partially received");
       queryClient.invalidateQueries({ queryKey: ["deliveries"] });
     },
     onError: (err: unknown) => {
-      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const errorMsg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
       toast.error(errorMsg || "Failed to mark partial");
     },
   });
@@ -180,7 +197,8 @@ export default function DeliveryTracking() {
       downloadFileFromResponse(res, "construction-deliveries.xlsx");
       toast.success("Deliveries exported successfully");
     } catch (err: unknown) {
-      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const errorMsg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
       toast.error(errorMsg || "Failed to export deliveries");
     } finally {
       setIsExporting(false);
@@ -255,9 +273,22 @@ export default function DeliveryTracking() {
   }, [filterOptions?.deliveryStatuses]);
 
   const sortOptions = useMemo(() => {
-    const rawSorts = filterOptions?.sortBy || ["Latest", "Oldest", "Weight", "DeliveryDate"];
+    const rawSorts = filterOptions?.sortBy || [
+      "Latest",
+      "Oldest",
+      "Weight",
+      "DeliveryDate",
+    ];
     return rawSorts.map((s) => ({ label: s, value: s }));
   }, [filterOptions?.sortBy]);
+
+  const materialTypeOptions = useMemo(() => {
+    const mats = filterOptions?.materialTypes || [];
+    return [
+      { label: "All Materials", value: "" },
+      ...mats.map((m) => ({ label: m, value: m })),
+    ];
+  }, [filterOptions?.materialTypes]);
 
   const destinationOptions = useMemo(() => {
     const dests = filterOptions?.siteDestinations || [];
@@ -284,10 +315,34 @@ export default function DeliveryTracking() {
   }, [filterOptions?.drivers]);
 
   const stats = [
-    { label: "In Transit", value: apiStats?.inTransit ?? 0, icon: Truck, bg: "bg-[#1D51A4]", sub: "Arriving at Plant" },
-    { label: "Staged", value: apiStats?.staged ?? 0, icon: Package, bg: "bg-[#3AB449]", sub: "At Plant/Yard" },
-    { label: "Ready", value: apiStats?.ready ?? 0, icon: CheckSquare, bg: "bg-[#F97316]", sub: "For Departure" },
-    { label: "Total Today", value: apiStats?.totalToday ?? 0, icon: Package, bg: "bg-[#4B5563]", sub: "All Deliveries" },
+    {
+      label: "In Transit",
+      value: apiStats?.inTransit ?? 0,
+      icon: Truck,
+      bg: "bg-[#1D51A4]",
+      sub: "Arriving at Plant",
+    },
+    {
+      label: "Staged",
+      value: apiStats?.staged ?? 0,
+      icon: Package,
+      bg: "bg-[#3AB449]",
+      sub: "At Plant/Yard",
+    },
+    {
+      label: "Ready",
+      value: apiStats?.ready ?? 0,
+      icon: CheckSquare,
+      bg: "bg-[#F97316]",
+      sub: "For Departure",
+    },
+    {
+      label: "Total Today",
+      value: apiStats?.totalToday ?? 0,
+      icon: Package,
+      bg: "bg-[#4B5563]",
+      sub: "All Deliveries",
+    },
   ];
 
   const deliveries = deliveriesList.map((item) => {
@@ -348,7 +403,10 @@ export default function DeliveryTracking() {
     let pickupStr = "-";
     if (item.schedule?.pickupDate) {
       const pDate = new Date(item.schedule.pickupDate);
-      const dateOptions: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+      const dateOptions: Intl.DateTimeFormatOptions = {
+        month: "short",
+        day: "numeric",
+      };
       const formattedDate = pDate.toLocaleDateString("en-US", dateOptions);
       pickupStr = `${formattedDate}${item.schedule.pickupTime ? `, ${item.schedule.pickupTime}` : ""}`;
     }
@@ -357,7 +415,10 @@ export default function DeliveryTracking() {
     let deliveryStr = "-";
     if (item.schedule?.deliveryDate) {
       const dDate = new Date(item.schedule.deliveryDate);
-      const dateOptions: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+      const dateOptions: Intl.DateTimeFormatOptions = {
+        month: "short",
+        day: "numeric",
+      };
       const formattedDate = dDate.toLocaleDateString("en-US", dateOptions);
       deliveryStr = `${formattedDate}${item.schedule.deliveryTime ? `, ${item.schedule.deliveryTime}` : ""}`;
     }
@@ -413,9 +474,13 @@ export default function DeliveryTracking() {
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50"
           >
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
             Export
           </button>
         </div>
@@ -435,9 +500,13 @@ export default function DeliveryTracking() {
               {isLoading ? (
                 <div className="h-8 w-12 bg-white/20 rounded animate-pulse my-0.5" />
               ) : (
-                <h3 className="text-2xl font-bold mb-0.5 tracking-tight">{stat.value}</h3>
+                <h3 className="text-2xl font-bold mb-0.5 tracking-tight">
+                  {stat.value}
+                </h3>
               )}
-              <p className="text-[9px] font-bold opacity-60 italic">{stat.sub}</p>
+              <p className="text-[9px] font-bold opacity-60 italic">
+                {stat.sub}
+              </p>
             </div>
             <div className="p-2.5 bg-white/20 rounded-lg">
               <stat.icon className="w-4 h-4" />
@@ -456,7 +525,7 @@ export default function DeliveryTracking() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search delivery #, material, description, location..."
-            className="w-full h-11 pl-10 pr-9 bg-white border border-gray-100 rounded-xl text-xs sm:text-sm font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
+            className="w-full h-11 pl-10 pr-9 bg-white border border-gray-100 rounded-lg text-xs sm:text-sm font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
           />
           {search && (
             <button
@@ -483,7 +552,7 @@ export default function DeliveryTracking() {
           />
 
           {/* Sort By selector */}
-          <div className="bg-white border border-gray-100 rounded-xl px-3.5 py-2 flex items-center justify-between gap-2 shadow-sm relative h-[40px] min-w-[150px]">
+          <div className="bg-white border border-gray-100 rounded-lg px-3.5 py-2 flex items-center justify-between gap-2 shadow-sm relative h-[40px] min-w-[150px]">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
               Sort:
             </span>
@@ -507,7 +576,7 @@ export default function DeliveryTracking() {
           {/* Toggle Advanced Filters Drawer */}
           <button
             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-            className={`flex items-center gap-2 px-4 h-[40px] rounded-xl text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${
+            className={`flex items-center gap-2 px-4 h-[40px] rounded-lg text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${
               isFilterExpanded || activeFiltersCount > 0
                 ? "bg-blue-50 border-blue-200 text-blue-700"
                 : "bg-white border-gray-100 text-gray-700 hover:bg-gray-50"
@@ -527,7 +596,7 @@ export default function DeliveryTracking() {
             <button
               onClick={resetAllFilters}
               title="Reset all filters"
-              className="flex items-center gap-1.5 px-3 h-[40px] rounded-xl text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-all"
+              className="flex items-center gap-1.5 px-3 h-[40px] rounded-lg text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Reset
@@ -538,7 +607,7 @@ export default function DeliveryTracking() {
 
       {/* Expandable Advanced Filters Drawer */}
       {isFilterExpanded && (
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-gray-100">
             <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-blue-600" />
@@ -556,7 +625,9 @@ export default function DeliveryTracking() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {/* Project Filter */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Project</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Project
+              </label>
               <ProjectSelector
                 value={projectFilter}
                 onChange={(val) => {
@@ -570,22 +641,40 @@ export default function DeliveryTracking() {
 
             {/* Material Type */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Material Type</label>
-              <input
-                type="text"
-                placeholder="e.g. Steel, Roof Panels"
-                value={materialTypeFilter}
-                onChange={(e) => {
-                  setMaterialTypeFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-xl text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
-              />
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Material Type
+              </label>
+              {materialTypeOptions.length > 1 ? (
+                <CustomSelect
+                  title="All Materials"
+                  options={materialTypeOptions}
+                  value={materialTypeFilter}
+                  onChange={(val) => {
+                    setMaterialTypeFilter(val);
+                    setPage(1);
+                  }}
+                  width="100%"
+                  searchable
+                />
+              ) : (
+                <input
+                  type="text"
+                  placeholder="e.g. Steel, Roof Panels"
+                  value={materialTypeFilter}
+                  onChange={(e) => {
+                    setMaterialTypeFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
+                />
+              )}
             </div>
 
             {/* Site Destination */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Site Destination</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Site Destination
+              </label>
               {destinationOptions.length > 1 ? (
                 <CustomSelect
                   title="All Destinations"
@@ -607,14 +696,16 @@ export default function DeliveryTracking() {
                     setDestinationFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-xl text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
+                  className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
                 />
               )}
             </div>
 
             {/* Transporter */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Transporter</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Transporter
+              </label>
               {transporterOptions.length > 1 ? (
                 <CustomSelect
                   title="All Transporters"
@@ -636,14 +727,16 @@ export default function DeliveryTracking() {
                     setTransporterFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-xl text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
+                  className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
                 />
               )}
             </div>
 
             {/* Driver */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Driver / Contact</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Driver / Contact
+              </label>
               {driverOptions.length > 1 ? (
                 <CustomSelect
                   title="All Drivers"
@@ -665,14 +758,16 @@ export default function DeliveryTracking() {
                     setDriverFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-xl text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
+                  className="w-full h-[40px] px-3.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all"
                 />
               )}
             </div>
 
             {/* Delivery Date: Start Date */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Delivery Date From</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Delivery Date From
+              </label>
               <input
                 type="date"
                 value={startDateFilter}
@@ -680,13 +775,15 @@ export default function DeliveryTracking() {
                   setStartDateFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full h-[40px] px-3 bg-white border border-gray-100 rounded-xl text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full h-[40px] px-3 bg-white border border-gray-100 rounded-lg text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all cursor-pointer"
               />
             </div>
 
             {/* Delivery Date: End Date */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Delivery Date To</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Delivery Date To
+              </label>
               <input
                 type="date"
                 value={endDateFilter}
@@ -694,7 +791,7 @@ export default function DeliveryTracking() {
                   setEndDateFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full h-[40px] px-3 bg-white border border-gray-100 rounded-xl text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full h-[40px] px-3 bg-white border border-gray-100 rounded-lg text-xs font-semibold outline-none shadow-sm focus:border-blue-500 transition-all cursor-pointer"
               />
             </div>
 
@@ -702,7 +799,7 @@ export default function DeliveryTracking() {
             <div className="flex items-end">
               <button
                 onClick={resetAllFilters}
-                className="w-full h-[40px] px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                className="w-full h-[40px] px-4 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Clear All
@@ -715,47 +812,70 @@ export default function DeliveryTracking() {
       {/* Active Filter Chips */}
       {activeFiltersCount > 0 && (
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Active:</span>
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+            Active:
+          </span>
           {debouncedSearch && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-xs font-medium">
               Search: "{debouncedSearch}"
-              <X className="w-3 h-3 cursor-pointer hover:text-blue-900" onClick={() => setSearch("")} />
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-blue-900"
+                onClick={() => setSearch("")}
+              />
             </span>
           )}
           {statusFilter && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-medium">
               Status: {formatStatusText(statusFilter)}
-              <X className="w-3 h-3 cursor-pointer hover:text-emerald-900" onClick={() => setStatusFilter("")} />
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-emerald-900"
+                onClick={() => setStatusFilter("")}
+              />
             </span>
           )}
           {projectFilter && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-700 border border-purple-100 rounded-lg text-xs font-medium">
               Project Filtered
-              <X className="w-3 h-3 cursor-pointer hover:text-purple-900" onClick={() => setProjectFilter("")} />
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-purple-900"
+                onClick={() => setProjectFilter("")}
+              />
             </span>
           )}
           {materialTypeFilter && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-xs font-medium">
               Material: {materialTypeFilter}
-              <X className="w-3 h-3 cursor-pointer hover:text-indigo-900" onClick={() => setMaterialTypeFilter("")} />
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-indigo-900"
+                onClick={() => setMaterialTypeFilter("")}
+              />
             </span>
           )}
           {destinationFilter && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-lg text-xs font-medium">
               Destination: {destinationFilter}
-              <X className="w-3 h-3 cursor-pointer hover:text-amber-900" onClick={() => setDestinationFilter("")} />
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-amber-900"
+                onClick={() => setDestinationFilter("")}
+              />
             </span>
           )}
           {transporterFilter && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 text-sky-700 border border-sky-100 rounded-lg text-xs font-medium">
               Carrier: {transporterFilter}
-              <X className="w-3 h-3 cursor-pointer hover:text-sky-900" onClick={() => setTransporterFilter("")} />
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-sky-900"
+                onClick={() => setTransporterFilter("")}
+              />
             </span>
           )}
           {driverFilter && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg text-xs font-medium">
               Driver: {driverFilter}
-              <X className="w-3 h-3 cursor-pointer hover:text-rose-900" onClick={() => setDriverFilter("")} />
+              <X
+                className="w-3 h-3 cursor-pointer hover:text-rose-900"
+                onClick={() => setDriverFilter("")}
+              />
             </span>
           )}
           {(startDateFilter || endDateFilter) && (
@@ -780,7 +900,7 @@ export default function DeliveryTracking() {
       )}
 
       {/* Info Banner */}
-      <div className="bg-[#EFF6FF] border border-blue-100 rounded-[18px] p-4 flex items-start gap-3 shadow-sm">
+      <div className="bg-[#EFF6FF] border border-blue-100 rounded-lg p-4 flex items-start gap-3 shadow-sm">
         <div className="p-1.5 bg-blue-100 rounded-lg shrink-0">
           <Info className="w-4 h-4 text-blue-600" />
         </div>
@@ -789,7 +909,9 @@ export default function DeliveryTracking() {
             Read-Only Access
           </h4>
           <p className="text-[11px] font-bold text-blue-700 leading-relaxed opacity-80">
-            This is a read-only view for plant coordination. You can view deliveries routed through the plant/yard/warehouse but cannot modify delivery information.
+            This is a read-only view for plant coordination. You can view
+            deliveries routed through the plant/yard/warehouse but cannot modify
+            delivery information.
           </p>
         </div>
       </div>
@@ -800,11 +922,11 @@ export default function DeliveryTracking() {
           [1, 2, 3].map((n) => (
             <div
               key={n}
-              className="bg-white rounded-[20px] shadow-sm border border-gray-50 overflow-hidden p-4 sm:p-6 animate-pulse"
+              className="bg-white rounded-lg shadow-sm border border-gray-50 overflow-hidden p-4 sm:p-6 animate-pulse"
             >
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5 mb-6">
                 <div className="flex items-start gap-4 w-full">
-                  <div className="w-10 h-10 bg-gray-200 rounded-xl flex-shrink-0" />
+                  <div className="w-10 h-10 bg-gray-200 rounded-lg flex-shrink-0" />
                   <div className="flex-1 space-y-2.5">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <div className="h-5 w-48 bg-gray-200 rounded" />
@@ -838,15 +960,21 @@ export default function DeliveryTracking() {
             </div>
           ))
         ) : isError ? (
-          <div className="bg-white rounded-[20px] p-12 text-center border border-red-50 shadow-sm">
+          <div className="bg-white rounded-lg p-12 text-center border border-red-50 shadow-sm">
             <Package className="w-12 h-12 text-red-300 mx-auto mb-4" />
-            <h3 className="text-sm font-bold text-red-900 mb-1">Failed to load deliveries</h3>
-            <p className="text-xs text-red-500">{(error as any)?.message || "Please refresh or try again later."}</p>
+            <h3 className="text-sm font-bold text-red-900 mb-1">
+              Failed to load deliveries
+            </h3>
+            <p className="text-xs text-red-500">
+              {(error as any)?.message || "Please refresh or try again later."}
+            </p>
           </div>
         ) : deliveries.length === 0 ? (
-          <div className="bg-white rounded-[20px] p-12 text-center border border-gray-50 shadow-sm">
+          <div className="bg-white rounded-lg p-12 text-center border border-gray-50 shadow-sm">
             <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-sm font-bold text-gray-900 mb-1">No Deliveries Found</h3>
+            <h3 className="text-sm font-bold text-gray-900 mb-1">
+              No Deliveries Found
+            </h3>
             <p className="text-xs text-gray-500">
               {activeFiltersCount > 0
                 ? "Try adjusting your search query or filter options."
@@ -855,7 +983,7 @@ export default function DeliveryTracking() {
             {activeFiltersCount > 0 && (
               <button
                 onClick={resetAllFilters}
-                className="mt-4 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-100 transition-all"
+                className="mt-4 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-100 transition-all"
               >
                 Clear Filters
               </button>
@@ -865,13 +993,13 @@ export default function DeliveryTracking() {
           deliveries.map((item, i) => (
             <div
               key={item.deliveryId || i}
-              className="bg-white rounded-[20px] shadow-sm border border-gray-50 overflow-hidden"
+              className="bg-white rounded-lg shadow-sm border border-gray-50 overflow-hidden"
             >
               <div className="p-4 sm:p-6">
                 {/* Card Header */}
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5 mb-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-[#1D51A4] rounded-xl flex-shrink-0 flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                    <div className="w-10 h-10 bg-[#1D51A4] rounded-lg flex-shrink-0 flex items-center justify-center text-white shadow-lg shadow-blue-100">
                       <Package className="w-5 h-5" />
                     </div>
                     <div>
@@ -901,8 +1029,12 @@ export default function DeliveryTracking() {
                             {item.subtitle}
                           </p>
                         </div>
-                        <span className="hidden sm:inline text-gray-200">|</span>
-                        <p className="text-[10px] font-bold text-gray-900 leading-none">ID: {item.id}</p>
+                        <span className="hidden sm:inline text-gray-200">
+                          |
+                        </span>
+                        <p className="text-[10px] font-bold text-gray-900 leading-none">
+                          ID: {item.id}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -930,8 +1062,12 @@ export default function DeliveryTracking() {
                           <Package className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Quantity</p>
-                          <p className="text-[13px] font-bold text-gray-900">{item.material.qty}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">
+                            Quantity
+                          </p>
+                          <p className="text-[13px] font-bold text-gray-900">
+                            {item.material.qty}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -942,7 +1078,9 @@ export default function DeliveryTracking() {
                           <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">
                             Staging Area
                           </p>
-                          <p className="text-[13px] font-bold text-gray-900">{item.material.area}</p>
+                          <p className="text-[13px] font-bold text-gray-900">
+                            {item.material.area}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -958,8 +1096,12 @@ export default function DeliveryTracking() {
                           <Calendar className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Arrival</p>
-                          <p className="text-[13px] font-bold text-gray-900">{item.schedule.arrival}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">
+                            Arrival
+                          </p>
+                          <p className="text-[13px] font-bold text-gray-900">
+                            {item.schedule.arrival}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -967,8 +1109,12 @@ export default function DeliveryTracking() {
                           <Calendar className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Departure</p>
-                          <p className="text-[13px] font-bold text-gray-900">{item.schedule.departure}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">
+                            Departure
+                          </p>
+                          <p className="text-[13px] font-bold text-gray-900">
+                            {item.schedule.departure}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -984,8 +1130,12 @@ export default function DeliveryTracking() {
                           <Truck className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Carrier</p>
-                          <p className="text-[13px] font-bold text-gray-900 leading-tight">{item.carrier.name}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">
+                            Carrier
+                          </p>
+                          <p className="text-[13px] font-bold text-gray-900 leading-tight">
+                            {item.carrier.name}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -993,8 +1143,12 @@ export default function DeliveryTracking() {
                           <MapPin className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Destination</p>
-                          <p className="text-[13px] font-bold text-gray-900 leading-tight">{item.carrier.address}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">
+                            Destination
+                          </p>
+                          <p className="text-[13px] font-bold text-gray-900 leading-tight">
+                            {item.carrier.address}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1002,9 +1156,13 @@ export default function DeliveryTracking() {
 
                   <div className="flex flex-col gap-4">
                     <div>
-                      <h5 className="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-wider">Notes</h5>
-                      <div className="bg-[#FFFBEB] border border-yellow-100 rounded-xl p-3.5">
-                        <p className="text-[11px] font-bold text-yellow-800 leading-tight">{item.notes}</p>
+                      <h5 className="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-wider">
+                        Notes
+                      </h5>
+                      <div className="bg-[#FFFBEB] border border-yellow-100 rounded-lg p-3.5">
+                        <p className="text-[11px] font-bold text-yellow-800 leading-tight">
+                          {item.notes}
+                        </p>
                       </div>
                     </div>
                     <div>
@@ -1014,12 +1172,24 @@ export default function DeliveryTracking() {
                         </div>
                         <div className="flex-1">
                           <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
-                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Truck</p>
-                            <p className="text-[8px] font-bold text-gray-900 leading-none">{item.truck.id}</p>
-                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Driver</p>
-                            <p className="text-[8px] font-bold text-gray-900 leading-none">{item.truck.driver}</p>
-                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Phone</p>
-                            <p className="text-[8px] font-bold text-gray-900 leading-none">{item.truck.phone}</p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">
+                              Truck
+                            </p>
+                            <p className="text-[8px] font-bold text-gray-900 leading-none">
+                              {item.truck.id}
+                            </p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">
+                              Driver
+                            </p>
+                            <p className="text-[8px] font-bold text-gray-900 leading-none">
+                              {item.truck.driver}
+                            </p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">
+                              Phone
+                            </p>
+                            <p className="text-[8px] font-bold text-gray-900 leading-none">
+                              {item.truck.phone}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1031,33 +1201,42 @@ export default function DeliveryTracking() {
                 {item.status !== "delivered" && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
                     <button
-                      onClick={() => markReceivedMutation.mutate(item.deliveryId)}
+                      onClick={() =>
+                        markReceivedMutation.mutate(item.deliveryId)
+                      }
                       disabled={markReceivedMutation.isPending}
-                      className="bg-[#10B981] text-white py-3 rounded-xl text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="bg-[#10B981] text-white py-3 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <CheckSquare className="w-3.5 h-3.5" />
-                      {markReceivedMutation.isPending ? "Marking..." : "Mark as Received"}
+                      {markReceivedMutation.isPending
+                        ? "Marking..."
+                        : "Mark as Received"}
                     </button>
                     <button
                       onClick={() => {
                         setScannedProjectId(item.leadId);
                         setScanOpen(true);
                       }}
-                      className="bg-[#F97316] text-white py-3 rounded-xl text-[9px] font-bold uppercase tracking-wider hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2"
+                      className="bg-[#F97316] text-white py-3 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2"
                     >
                       <QrCode className="w-3.5 h-3.5" />
                       Scan QR Code
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedDelivery({ id: item.deliveryId, number: item.id });
+                        setSelectedDelivery({
+                          id: item.deliveryId,
+                          number: item.id,
+                        });
                         setPartialOpen(true);
                       }}
                       disabled={markPartialMutation.isPending}
-                      className="bg-[#1D51A4] text-white py-3 rounded-xl text-[9px] font-bold uppercase tracking-wider hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="bg-[#1D51A4] text-white py-3 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <Info className="w-3.5 h-3.5" />
-                      {markPartialMutation.isPending ? "Marking..." : "Partial Received"}
+                      {markPartialMutation.isPending
+                        ? "Marking..."
+                        : "Partial Received"}
                     </button>
                   </div>
                 )}
@@ -1087,20 +1266,22 @@ export default function DeliveryTracking() {
 
       {/* Pagination Bar */}
       {!isLoading && !isError && total > 0 && (
-        <div className="px-4 sm:px-6 py-4 bg-white rounded-2xl border border-gray-50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="px-4 sm:px-6 py-4 bg-white rounded-lg border border-gray-50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Show</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Show
+            </span>
             <select
               value={limit}
               onChange={(e) => {
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="h-9 px-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-blue-500 transition-all"
+              className="h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-900 outline-none focus:border-blue-500 transition-all"
             >
+              <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={20}>20</option>
-              <option value={50}>50</option>
             </select>
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
               Deliveries (Total: {total})
@@ -1197,7 +1378,10 @@ export default function DeliveryTracking() {
         }}
         deliveryId={selectedDetailId}
       />
-      <AddDeliveryDrawer open={addDeliveryOpen} onClose={() => setAddDeliveryOpen(false)} />
+      <AddDeliveryDrawer
+        open={addDeliveryOpen}
+        onClose={() => setAddDeliveryOpen(false)}
+      />
       <MarkPartialModal
         open={partialOpen}
         onClose={() => {
@@ -1215,7 +1399,7 @@ export default function DeliveryTracking() {
                   setPartialOpen(false);
                   setSelectedDelivery(null);
                 },
-              }
+              },
             );
           }
         }}

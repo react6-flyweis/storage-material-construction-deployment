@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Calendar from "../components/calendar/Calendar";
-import { ChevronDown, ArrowLeft, ArrowRight, Calendar as CalendarIcon } from "lucide-react";
+import {
+  ChevronDown,
+  ArrowLeft,
+  ArrowRight,
+  Calendar as CalendarIcon,
+} from "lucide-react";
 import MaterialRequestDetailsModal from "../components/materials/MaterialRequestDetailsModal";
 import AddDeliveryDrawer from "../components/materials/AddDeliveryDrawer";
 import { useQuery } from "@tanstack/react-query";
@@ -10,7 +15,8 @@ import type { Project } from "../types/projects.types";
 import ProjectSelector from "../components/common/ProjectSelector";
 
 const getStatusDisplay = (status?: string) => {
-  if (!status) return <span className="text-gray-400 font-medium text-sm">-</span>;
+  if (!status)
+    return <span className="text-gray-400 font-medium text-sm">-</span>;
 
   const s = status.toLowerCase();
   let color = "text-amber-500";
@@ -19,7 +25,9 @@ const getStatusDisplay = (status?: string) => {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
-  if (["completed", "delivered", "deal_closed", "ready_for_delivery"].includes(s)) {
+  if (
+    ["completed", "delivered", "deal_closed", "ready_for_delivery"].includes(s)
+  ) {
     color = "text-emerald-500";
     if (s === "delivered" || s === "deal_closed") label = "Completed";
   } else if (["canceled", "cancelled", "rejected"].includes(s)) {
@@ -35,7 +43,8 @@ const getStatusDisplay = (status?: string) => {
     ].includes(s)
   ) {
     color = "text-amber-500";
-    if (s === "in_progress" || s === "work_in_progress") label = "Work in Progress";
+    if (s === "in_progress" || s === "work_in_progress")
+      label = "Work in Progress";
   } else {
     color = "text-amber-500";
   }
@@ -48,9 +57,19 @@ const getPriorityBadge = (priority?: string, status?: string) => {
 
   // If priority isn't provided by backend, infer sensible default from status
   if (!p) {
-    if (["fabrication_started", "quality_inspection", "ready_for_delivery"].includes(status || "")) {
+    if (
+      [
+        "fabrication_started",
+        "quality_inspection",
+        "ready_for_delivery",
+      ].includes(status || "")
+    ) {
       p = "high";
-    } else if (["initial_contact", "requirements_gathered", "negotiation"].includes(status || "")) {
+    } else if (
+      ["initial_contact", "requirements_gathered", "negotiation"].includes(
+        status || "",
+      )
+    ) {
       p = "low";
     } else {
       p = "medium";
@@ -85,7 +104,7 @@ export default function Projects() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"calendar" | "project">(
-    searchParams.get("tab") === "calendar" ? "calendar" : "project"
+    searchParams.get("tab") === "project" ? "project" : "calendar",
   );
   const [toggle, setToggle] = useState(false);
 
@@ -93,11 +112,14 @@ export default function Projects() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [selectedCalendarProjectId, setSelectedCalendarProjectId] = useState<string>(
-    searchParams.get("projectId") || ""
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    null,
   );
-  const [selectedProjectObj, setSelectedProjectObj] = useState<Project | null>(null);
+  const [selectedCalendarProjectId, setSelectedCalendarProjectId] =
+    useState<string>(searchParams.get("projectId") || "");
+  const [selectedProjectObj, setSelectedProjectObj] = useState<Project | null>(
+    null,
+  );
 
   // Query for paginated projects list with hasDelivery=true
   const { data, isLoading, error } = useQuery({
@@ -127,10 +149,13 @@ export default function Projects() {
   const selectedProjObj =
     selectedProjectObj ||
     dropdownProjects.find(
-      (p: Project) => p._id === selectedCalendarProjectId || p.leadId === selectedCalendarProjectId
+      (p: Project) =>
+        p._id === selectedCalendarProjectId ||
+        p.leadId === selectedCalendarProjectId,
     ) ||
     null;
-  const leadIdToPass = selectedProjObj?.leadId || selectedCalendarProjectId || "";
+  const leadIdToPass =
+    selectedProjObj?.leadId || selectedCalendarProjectId || "";
 
   const handleViewProject = (project: Project) => {
     const targetId = project._id || project.leadId;
@@ -217,7 +242,8 @@ export default function Projects() {
             onClick={() => setToggle(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-1.5 cursor-pointer"
           >
-            <span className="text-base leading-none font-normal">+</span> Add Delivery
+            <span className="text-base leading-none font-normal">+</span> Add
+            Delivery
           </button>
         </div>
       )}
@@ -240,9 +266,7 @@ export default function Projects() {
           {/* Project List Card - crisp, clean, not rounded */}
           <div className="bg-white rounded-md shadow-2xs border border-gray-200/80 overflow-hidden">
             <div className="px-6 py-4">
-              <h2 className="text-sm font-bold text-gray-900">
-                Project List
-              </h2>
+              <h2 className="text-sm font-bold text-gray-900">Project List</h2>
             </div>
 
             <div className="overflow-x-auto scroll-hide">
@@ -331,7 +355,10 @@ export default function Projects() {
 
                         {/* Priority */}
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getPriorityBadge(project.priority, project.lifecycleStatus)}
+                          {getPriorityBadge(
+                            project.priority,
+                            project.lifecycleStatus,
+                          )}
                         </td>
 
                         {/* Actions */}
@@ -342,7 +369,10 @@ export default function Projects() {
                                 setSelectedCalendarProjectId(project._id);
                                 setSelectedProjectObj(project);
                                 setActiveTab("calendar");
-                                setSearchParams({ tab: "calendar", projectId: project._id });
+                                setSearchParams({
+                                  tab: "calendar",
+                                  projectId: project._id,
+                                });
                               }}
                               className="px-3 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-semibold text-blue-600 hover:bg-blue-100 transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
                               title="View in Calendar"
@@ -398,13 +428,17 @@ export default function Projects() {
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .filter(
+                  (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
+                )
                 .map((p, idx, arr) => {
                   const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
                   return (
                     <div key={p} className="flex items-center gap-1.5">
                       {showEllipsis && (
-                        <span className="text-gray-400 text-xs px-0.5">...</span>
+                        <span className="text-gray-400 text-xs px-0.5">
+                          ...
+                        </span>
                       )}
                       <button
                         onClick={() => setPage(p)}
@@ -422,7 +456,9 @@ export default function Projects() {
 
               <button
                 disabled={page === totalPages || totalPages === 0}
-                onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                onClick={() =>
+                  setPage((prev) => Math.min(prev + 1, totalPages))
+                }
                 className="w-7 h-7 flex items-center justify-center rounded border border-gray-200 bg-white text-gray-400 hover:text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 <ArrowRight className="w-3.5 h-3.5" />
