@@ -4,4 +4,7 @@ export * from "./ProjectDetailsNavButtons";
 export * from "./ProjectSummaryCard";
 export * from "./UpcomingMaterialDeliveryTable";
 export * from "./ProjectTasksCard";
+export * from "./ProjectConstructionTasksCard";
+export * from "./AddConstructionTaskModal";
+export * from "./ConstructionTaskDetailsModal";
 export * from "./ProjectPhotosGallery";

@@ -1,8 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { getDashboardApi, getDashboardFiltersApi } from "../api/projects.api";
+import { toast } from "react-hot-toast";
+import {
+  getDashboardApi,
+  getDashboardFiltersApi,
+  exportDashboardApi,
+} from "../api/projects.api";
 import type { DashboardQueryParams } from "../types/projects.types";
+import { downloadFileFromResponse } from "../lib/downloadUtils";
 import StatsOverview from "../components/cards/StatCard";
 import DashboardDonutChart from "../components/charts/DashboardDonutChart";
 import Timeline from "../components/common/Timeline";
@@ -18,6 +24,7 @@ import {
   Truck,
   Compass,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import {
   ActiveConstructionSites,
@@ -28,6 +35,7 @@ import { formatDateDisplay, formatStatusLabel } from "../utils/dashboard.utils";
 
 export default function Dashboard() {
   const [successOpen, setSuccessOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Filters state
   const [selectedProject, setSelectedProject] = useState("");
@@ -369,6 +377,21 @@ export default function Dashboard() {
     return "Date: Default (Today)";
   }, [fromDate, toDate]);
 
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const res = await exportDashboardApi(queryParams);
+      downloadFileFromResponse(res, "construction-dashboard-report.xlsx");
+      setSuccessOpen(true);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      toast.error(errorMsg || "Failed to export dashboard report");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-10">
       {/* Header Section */}
@@ -382,15 +405,20 @@ export default function Dashboard() {
           </p>
         </div>
         <button
-          onClick={() => setSuccessOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-md shadow-sm transition-colors text-sm flex items-center gap-2"
+          onClick={handleExport}
+          disabled={isExporting}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-md shadow-sm transition-colors text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <img
-            src={ExportIcon}
-            alt=""
-            className="w-4 h-4 brightness-0 invert"
-          />
-          Export Report
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+          ) : (
+            <img
+              src={ExportIcon}
+              alt=""
+              className="w-4 h-4 brightness-0 invert"
+            />
+          )}
+          <span>{isExporting ? "Exporting..." : "Export Report"}</span>
         </button>
       </div>
 

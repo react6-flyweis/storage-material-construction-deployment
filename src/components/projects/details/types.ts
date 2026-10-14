@@ -46,6 +46,20 @@ export interface ProjectTaskItem {
   assignedTo?: string | null;
 }
 
+export interface ProjectConstructionTaskItem {
+  id: string;
+  stepKey?: string;
+  title: string;
+  startDate: string;
+  estEndDate: string;
+  completedDate?: string;
+  status: "under_timeline" | "days_late" | "delayed" | "in_progress" | "completed" | string;
+  statusLabel?: string;
+  statusBadgeColor?: "green" | "red" | "blue" | "amber";
+  description?: string;
+  photos?: string[];
+}
+
 export interface ProjectPhoto {
   id: string;
   url?: string;

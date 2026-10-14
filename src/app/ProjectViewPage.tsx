@@ -8,6 +8,7 @@ import {
   ProjectSummaryCard,
   UpcomingMaterialDeliveryTable,
   ProjectTasksCard,
+  ProjectConstructionTasksCard,
   type ProjectSummary,
   type MaterialDelivery,
   type ProjectTaskItem,
@@ -282,7 +283,13 @@ export default function ProjectViewPage() {
       {/* 3. Project Summary Card */}
       <ProjectSummaryCard summary={summary} />
 
-      {/* 4. Upcoming Material Delivery Table */}
+      {/* 4. Project Construction Task Card */}
+      <ProjectConstructionTasksCard
+        projectId={project?._id || projectId}
+        leadId={project?.leadId}
+      />
+
+      {/* 5. Upcoming Material Delivery Table */}
       <UpcomingMaterialDeliveryTable
         deliveries={deliveries}
         onSelectDelivery={handleDeliverySelect}
