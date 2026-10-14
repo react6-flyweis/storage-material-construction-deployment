@@ -496,6 +496,99 @@ export interface BundleScanQueryParams {
   status?: "pending" | "staged" | "on_truck" | "loaded" | "all" | string;
 }
 
+export interface BundleScanProjectListItem {
+  leadId: string;
+  projectId: string;
+  jobId: string;
+  projectName: string;
+  location: string;
+  lifecycleStatus: string;
+  totalLoads: number;
+  totalBundles: number;
+  labelsPending: number;
+  lastLoadUpdate: string | null;
+  packingListPlanId: string | null;
+  packingListPlanStatus: string | null;
+}
+
+export interface BundleScanProjectsApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    projects: BundleScanProjectListItem[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface BundleScanProjectSummary {
+  leadId: string;
+  projectId: string;
+  jobId: string;
+  projectName: string;
+  location: string;
+  lifecycleStatus: string;
+}
+
+export interface BundleScanLoadItem {
+  packingListId: string;
+  packingListNo: string;
+  truckLabel: string;
+  truckType?: string;
+  status: string;
+  totalBundles: number;
+  totalWeight: number;
+  maxLengthFeet: number;
+  updatedAt: string;
+}
+
+export interface BundleScanLoadsApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    project: BundleScanProjectSummary;
+    loads: BundleScanLoadItem[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface BundleScanBundleItem {
+  bundleId: string;
+  bundleNo: string;
+  bundleType: string;
+  title: string;
+  totalWeight: number;
+  maxLengthFeet: number;
+  status: string;
+  labelPrinted: boolean;
+  labelPrintedAt: string | null;
+  verified: boolean;
+  updatedAt: string;
+}
+
+export interface BundleScanLoadSummary {
+  packingListId: string;
+  packingListNo: string;
+  truckLabel: string;
+  status: string;
+  totalBundles: number;
+  totalWeight: number;
+}
+
+export interface BundleScanLoadBundlesApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    project: BundleScanProjectSummary;
+    load: BundleScanLoadSummary;
+    bundles: BundleScanBundleItem[];
+    total: number;
+  };
+}
+
 export interface PackingListProject {
   leadId: string;
   projectName: string;
@@ -1212,5 +1305,97 @@ export interface GetWorkLogsParams {
   leadId?: string;
   page?: number;
   limit?: number;
+}
+
+export interface ConstructionPhase {
+  key: string;
+  label: string;
+  status: "Upcoming" | "Inprogress" | "Completed" | string;
+  date?: string;
+  percentComplete: number;
+  stepsCompleted: number;
+  stepsTotal: number;
+  stageKeys: string[];
+}
+
+export interface ConstructionStepAttachment {
+  name?: string;
+  url: string;
+}
+
+export interface ConstructionStep {
+  key?: string;
+  stepKey: string;
+  label: string;
+  status: "pending" | "in_progress" | "completed" | "delayed" | string;
+  completionPct?: number;
+  percentComplete?: number;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  expectedCompletion?: string | null;
+  notes?: string;
+  attachments?: ConstructionStepAttachment[];
+}
+
+export interface ConstructionPhasesResponseData {
+  project: {
+    leadId: string;
+    projectName: string;
+    jobId: string;
+  };
+  phases: ConstructionPhase[];
+  steps: ConstructionStep[];
+  overallProgressPct: number;
+  currentStepNumber?: number;
+  totalSteps?: number;
+  currentStepLabel?: string;
+}
+
+export interface ConstructionPhasesApiResponse {
+  success: boolean;
+  message: string;
+  data: ConstructionPhasesResponseData;
+}
+
+export interface UpdateStepPayload {
+  status?: string;
+  percentComplete?: number;
+  completionPct?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  startedBy?: string;
+  completedBy?: string;
+  expectedCompletion?: string | null;
+  notes?: string;
+  attachments?: ConstructionStepAttachment[];
+}
+
+export interface UpdateStepApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    stepDetail: {
+      leadId: string;
+      stepKey: string;
+      completionPct: number;
+      startedAt?: string | null;
+      completedAt?: string | null;
+      notes?: string;
+      attachments?: ConstructionStepAttachment[];
+    };
+  };
+}
+
+export interface AddStepAttachmentPayload {
+  name?: string;
+  url: string;
+}
+
+export interface AddStepAttachmentApiResponse {
+  success: boolean;
+  message: string;
+  data?: unknown;
 }
 
