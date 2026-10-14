@@ -28,6 +28,9 @@ const ResetPassword = lazy(() => import("../components/home/resetpassword"));
 const DeliveryTracking = lazy(() => import("../app/DeliveryTracking"));
 const LoadStaging = lazy(() => import("../app/LoadStaging"));
 const BundleScan = lazy(() => import("../app/BundleScan"));
+const BundleScanLoads = lazy(() => import("../app/BundleScanLoads"));
+const BundleScanBundles = lazy(() => import("../app/BundleScanBundles"));
+const BundleDetailsPage = lazy(() => import("../app/BundleDetailsPage"));
 const LabelPrinting = lazy(() => import("../app/LabelPrinting"));
 const PackingLists = lazy(() => import("../app/PackingLists"));
 const DispatchVerification = lazy(() => import("../app/DispatchVerification"));
@@ -82,6 +85,12 @@ const AppRoutes = () => {
               <Route path="/delivery-tracking" element={<DeliveryTracking />} />
               <Route path="/delivery-tracking/load-staging" element={<LoadStaging />} />
               <Route path="/delivery-tracking/bundle-scan" element={<BundleScan />} />
+              <Route path="/delivery-tracking/bundle-scan/projects/:leadId/loads" element={<BundleScanLoads />} />
+              <Route path="/delivery-tracking/bundle-scan/projects/:leadId" element={<BundleScanLoads />} />
+              <Route path="/delivery-tracking/bundle-scan/loads/:packingListId/bundles" element={<BundleScanBundles />} />
+              <Route path="/delivery-tracking/bundle-scan/loads/:packingListId" element={<BundleScanBundles />} />
+              <Route path="/delivery-tracking/bundle-scan/bundles/:bundleId" element={<BundleDetailsPage />} />
+              <Route path="/delivery-tracking/bundle-scan/bundles/:bundleId/details" element={<BundleDetailsPage />} />
               <Route path="/delivery-tracking/label-printing" element={<LabelPrinting />} />
               <Route path="/delivery-tracking/packing-lists" element={<PackingLists />} />
               <Route path="/delivery-tracking/dispatch-verification" element={<DispatchVerification />} />
