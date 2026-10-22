@@ -5,7 +5,11 @@ import type { ProjectConstructionTaskItem } from "./types";
 import { AddConstructionTaskModal } from "./AddConstructionTaskModal";
 import { ConstructionTaskDetailsModal } from "./ConstructionTaskDetailsModal";
 import SuccessModal from "@/components/common/SuccessModal";
-import { getProjectPhasesApi, updateProjectStepApi } from "@/api/projects.api";
+import {
+  getProjectTimelineTasksApi,
+  completeConstructionTaskApi,
+  deleteConstructionTaskApi,
+} from "@/api/projects.api";
 
 interface ProjectConstructionTasksCardProps {
   projectId?: string;
@@ -24,59 +28,6 @@ const formatDisplayDate = (val?: string | null) => {
   });
 };
 
-const DEFAULT_CONSTRUCTION_TASKS: ProjectConstructionTaskItem[] = [
-  {
-    id: "task-const-1",
-    stepKey: "site_preparation",
-    title: "Site Preparation & Foundation",
-    startDate: "12 April 2026",
-    estEndDate: "13 April 2026",
-    completedDate: "14 April 2026",
-    status: "under_timeline",
-    statusLabel: "Under timeline",
-    statusBadgeColor: "green",
-    description: "Site grading, earthwork compaction, and reinforced concrete footings completed and cured.",
-    photos: [],
-  },
-  {
-    id: "task-const-2",
-    stepKey: "steel_structure_erection",
-    title: "Steel Structure Erection",
-    startDate: "15 April 2026",
-    estEndDate: "16 April 2026",
-    completedDate: "18 April 2026",
-    status: "days_late",
-    statusLabel: "2 Days Late",
-    statusBadgeColor: "green",
-    description: "Main framing, primary steel columns, and rafters erected. Delay occurred due to high wind weather conditions.",
-    photos: [],
-  },
-  {
-    id: "task-const-3",
-    stepKey: "roofing_installation",
-    title: "Roofing Installation",
-    startDate: "15 April 2026",
-    estEndDate: "18 April 2026",
-    status: "delayed",
-    statusLabel: "2 Days Delayed",
-    statusBadgeColor: "red",
-    description: "Roof purlins, standing seam insulation panels, and ridge vents currently scheduled.",
-    photos: [],
-  },
-  {
-    id: "task-const-4",
-    stepKey: "secondary_framing",
-    title: "Secondary Framing Installation",
-    startDate: "18 April 2026",
-    estEndDate: "20 April 2026",
-    status: "in_progress",
-    statusLabel: "In Progress",
-    statusBadgeColor: "blue",
-    description: "Installation of wall girts, door frames, header channels, and corner trims in progress.",
-    photos: [],
-  },
-];
-
 export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCardProps> = ({
   projectId,
   leadId,
@@ -85,42 +36,71 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
   const queryClient = useQueryClient();
   const effectiveLeadId = leadId || projectId;
 
-  // Query real phases & steps from backend if available
-  const { data: phasesResponse } = useQuery({
-    queryKey: ["construction-phases", effectiveLeadId],
-    queryFn: () => getProjectPhasesApi(effectiveLeadId!),
+  // Query real timeline tasks from backend as per API documentation
+  const { data: timelineResponse, isLoading } = useQuery({
+    queryKey: ["timeline-tasks", effectiveLeadId],
+    queryFn: () => getProjectTimelineTasksApi(effectiveLeadId!),
     enabled: Boolean(effectiveLeadId),
     retry: 1,
   });
 
   const tasks: ProjectConstructionTaskItem[] = useMemo(() => {
-    const apiSteps = phasesResponse?.data?.data?.steps;
-    if (apiSteps && apiSteps.length > 0) {
-      return apiSteps.map((s, idx) => {
-        const isDone = s.status === "completed" || (s.completionPct !== undefined && s.completionPct >= 100);
+    const rawTimelineTasks = timelineResponse?.data?.data?.timelineTasks;
+    if (rawTimelineTasks && Array.isArray(rawTimelineTasks)) {
+      if (rawTimelineTasks.length === 0) {
+        return [];
+      }
+      // Sort client-side by startDate asc as specified in documentation
+      const sorted = [...rawTimelineTasks].sort((a, b) => {
+        const timeA = a.startDate ? new Date(a.startDate).getTime() : 0;
+        const timeB = b.startDate ? new Date(b.startDate).getTime() : 0;
+        return timeA - timeB;
+      });
+
+      return sorted.map((t, idx) => {
+        const isDone = t.status === "done" || Boolean(t.completedDate || t.completedAt);
+        const estDate = t.estimatedEndDate || t.dueDate;
+        const compDate = t.completedDate || t.completedAt;
+
         return {
-          id: s.stepKey || s.key || `step-${idx}`,
-          stepKey: s.stepKey || s.key,
-          title: s.label,
-          startDate: formatDisplayDate(s.startedAt) || "15 April 2026",
-          estEndDate: formatDisplayDate(s.expectedCompletion || s.completedAt) || "18 April 2026",
-          completedDate: s.completedAt ? formatDisplayDate(s.completedAt) : undefined,
-          status: s.status,
-          statusLabel: isDone
-            ? "Under timeline"
-            : s.status === "delayed"
-            ? "2 Days Delayed"
-            : s.status === "in_progress"
-            ? "In Progress"
-            : s.status,
-          statusBadgeColor: isDone ? "green" : s.status === "delayed" ? "red" : "blue",
-          description: s.notes || "",
-          photos: s.attachments?.map((a) => a.url) || [],
+          id: t._id || t.id || `task-${idx}`,
+          _id: t._id,
+          title: t.title,
+          startDate: formatDisplayDate(t.startDate) || "-",
+          estEndDate: formatDisplayDate(estDate) || "-",
+          estimatedEndDate: t.estimatedEndDate,
+          dueDate: t.dueDate,
+          completedDate: compDate ? formatDisplayDate(compDate) : undefined,
+          completedAt: t.completedAt,
+          status: t.status,
+          statusLabel: t.timelineBadge?.label || (isDone ? "Under timeline" : "In Progress"),
+          statusBadgeColor:
+            t.timelineBadge?.tone === "danger"
+              ? "red"
+              : t.timelineBadge?.tone === "info"
+              ? "blue"
+              : "green",
+          timelineBadge: t.timelineBadge,
+          timelineStatusLine: t.timelineStatusLine,
+          onTimeStatus: t.onTimeStatus,
+          onTime: t.onTime,
+          daysLateOrEarly: t.daysLateOrEarly,
+          daysPastDue: t.daysPastDue,
+          canMarkComplete: t.canMarkComplete ?? (!isDone && t.status !== "done"),
+          description: t.description || t.workDescription || "",
+          workDescription: t.workDescription,
+          photos: t.attachments || [],
+          attachments: t.attachments || [],
         };
       });
     }
-    return initialTasks && initialTasks.length > 0 ? initialTasks : DEFAULT_CONSTRUCTION_TASKS;
-  }, [phasesResponse, initialTasks]);
+
+    if (initialTasks && initialTasks.length > 0) {
+      return initialTasks;
+    }
+
+    return [];
+  }, [timelineResponse, initialTasks]);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -131,13 +111,27 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
   }, [tasks, selectedTaskId]);
 
   const handleAddTask = () => {
-    queryClient.invalidateQueries({ queryKey: ["construction-phases"] });
+    queryClient.invalidateQueries({ queryKey: ["timeline-tasks"] });
+    if (effectiveLeadId) {
+      queryClient.invalidateQueries({ queryKey: ["timeline-tasks", effectiveLeadId] });
+    }
     queryClient.invalidateQueries({ queryKey: ["project-details"] });
   };
 
-  const handleRemoveTask = () => {
-    setDetailsModalOpen(false);
-    setSelectedTaskId(null);
+  const handleRemoveTask = async (taskId: string) => {
+    try {
+      await deleteConstructionTaskApi(taskId);
+      await queryClient.invalidateQueries({ queryKey: ["timeline-tasks"] });
+      if (effectiveLeadId) {
+        await queryClient.refetchQueries({ queryKey: ["timeline-tasks", effectiveLeadId] });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["project-details"] });
+    } catch (err) {
+      console.error("Failed to remove construction task:", err);
+    } finally {
+      setDetailsModalOpen(false);
+      setSelectedTaskId(null);
+    }
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -151,8 +145,9 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
   };
 
   const handleViewAllMedia = () => {
-    if (projectId) {
-      window.open(`/projects/${projectId}/view-drawings`, "_blank");
+    const targetId = effectiveLeadId || projectId;
+    if (targetId) {
+      window.open(`/projects/${targetId}/view-drawings`, "_blank");
     }
   };
 
@@ -162,33 +157,22 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
   const handleMarkComplete = async (taskId: string) => {
     setMarkingTaskId(taskId);
     try {
-      const target = tasks.find((t) => t.id === taskId);
-      const stepKey = target?.stepKey || target?.id || taskId;
-
-      if (effectiveLeadId && stepKey) {
-        try {
-          await updateProjectStepApi(effectiveLeadId, stepKey, {
-            status: "completed",
-            percentComplete: 100,
-            completionPct: 100,
-            endDate: new Date().toISOString(),
-            completedAt: new Date().toISOString(),
-          });
-        } catch (apiErr) {
-          console.warn("API step update notice:", apiErr);
-        }
-      }
+      await completeConstructionTaskApi(taskId, {
+        completedAt: new Date().toISOString(),
+      });
 
       // Invalidate queries to get fresh data from server (NO manual state mutation!)
-      await queryClient.invalidateQueries({ queryKey: ["construction-phases"] });
-      await queryClient.invalidateQueries({ queryKey: ["project-details"] });
+      await queryClient.invalidateQueries({ queryKey: ["timeline-tasks"] });
       if (effectiveLeadId) {
-        await queryClient.refetchQueries({ queryKey: ["construction-phases", effectiveLeadId] });
+        await queryClient.refetchQueries({ queryKey: ["timeline-tasks", effectiveLeadId] });
       }
+      await queryClient.invalidateQueries({ queryKey: ["project-details"] });
 
       if (!detailsModalOpen) {
         setShowCardSuccessModal(true);
       }
+    } catch (err) {
+      console.error("Failed to mark construction task complete:", err);
     } finally {
       setMarkingTaskId(null);
     }
@@ -200,38 +184,41 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
   };
 
   const renderStatusBadge = (task: ProjectConstructionTaskItem) => {
-    if (task.status === "delayed") {
+    const badge = task.timelineBadge;
+    const tone = badge?.tone?.toLowerCase();
+    const label = badge?.label || task.statusLabel || "In Progress";
+
+    if (
+      tone === "danger" ||
+      task.status === "delayed" ||
+      label.toLowerCase().includes("delay")
+    ) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#EF4444] text-white select-none">
           <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-          <span>{task.statusLabel || "Delayed"}</span>
+          <span>{label}</span>
         </span>
       );
     }
 
-    if (task.status === "in_progress") {
+    if (
+      tone === "info" ||
+      task.status === "in_progress" ||
+      label.toLowerCase().includes("progress")
+    ) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-stats-delayed text-white select-none">
           <span className="w-1.5 h-1.5 rounded-full bg-white" />
-          <span>{task.statusLabel || "In Progress"}</span>
+          <span>{label}</span>
         </span>
       );
     }
 
-    if (task.status === "days_late") {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#10B981] text-white select-none">
-          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-          <span>{task.statusLabel || "2 Days Late"}</span>
-        </span>
-      );
-    }
-
-    // Default under timeline / completed
+    // Default under timeline or N days late (success tone)
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#10B981] text-white select-none">
         <span className="w-1.5 h-1.5 rounded-full bg-white" />
-        <span>{task.statusLabel || "Under timeline"}</span>
+        <span>{label}</span>
       </span>
     );
   };
@@ -254,87 +241,121 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
         </button>
       </div>
 
-      {/* Task Cards Single Row with Scroll */}
-      <div
-        ref={scrollContainerRef}
-        onWheel={handleWheel}
-        className="flex items-stretch gap-4 overflow-x-auto pb-3 pt-0.5 scroll-smooth"
-      >
-        {tasks.map((task) => {
-          const isCompleted =
-            Boolean(task.completedDate) ||
-            task.status === "completed" ||
-            task.status === "under_timeline" ||
-            task.status === "days_late";
-
-          return (
+      {/* Task Cards Single Row with Scroll or Empty State */}
+      {isLoading ? (
+        <div className="flex items-center gap-4 overflow-x-auto pb-3 pt-0.5">
+          {[1, 2, 3].map((n) => (
             <div
-              key={task.id}
-              onClick={() => handleOpenDetails(task)}
-              className="w-[280px] sm:w-[290px] shrink-0 bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow cursor-pointer"
-            >
-              {/* Task Title & Dates */}
-              <div>
-                <h4 className="text-sm sm:text-base font-bold text-[#0F172A] leading-snug line-clamp-2 min-h-11">
-                  {task.title}
-                </h4>
+              key={n}
+              className="w-[280px] sm:w-[290px] h-48 shrink-0 bg-gray-50 rounded-2xl border border-gray-200 animate-pulse p-5"
+            />
+          ))}
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="py-8 px-4 text-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+          <p className="text-sm font-semibold text-gray-700">
+            No construction timeline tasks yet
+          </p>
+          <p className="text-xs text-gray-500 mt-1 mb-3">
+            Add tasks to track site progress on the construction timeline.
+          </p>
+          <button
+            type="button"
+            onClick={() => setAddModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#485563] hover:bg-[#374151] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5 text-white" />
+            <span>Add Task</span>
+          </button>
+        </div>
+      ) : (
+        <div
+          ref={scrollContainerRef}
+          onWheel={handleWheel}
+          className="flex items-stretch gap-4 overflow-x-auto pb-3 pt-0.5 scroll-smooth"
+        >
+          {tasks.map((task) => {
+            const isCompleted =
+              Boolean(task.completedDate) ||
+              task.status === "done" ||
+              task.status === "completed" ||
+              task.status === "under_timeline" ||
+              task.status === "days_late";
 
-                <div className="mt-2.5 space-y-1 text-xs text-gray-500 font-medium">
-                  <p>Start: {task.startDate}</p>
-                  <p>
-                    {isCompleted ? "Est End: " : "Est: "}
-                    {task.estEndDate}
-                  </p>
-                  {task.completedDate && (
-                    <p className="text-gray-600">Completed: {task.completedDate}</p>
-                  )}
+            const canMarkComplete =
+              task.canMarkComplete ?? (!isCompleted && task.status !== "done");
+
+            return (
+              <div
+                key={task.id}
+                onClick={() => handleOpenDetails(task)}
+                className="w-[280px] sm:w-[290px] shrink-0 bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow cursor-pointer"
+              >
+                {/* Task Title & Dates */}
+                <div>
+                  <h4 className="text-sm sm:text-base font-bold text-[#0F172A] leading-snug line-clamp-2 min-h-11">
+                    {task.title}
+                  </h4>
+
+                  <div className="mt-2.5 space-y-1 text-xs text-gray-500 font-medium">
+                    <p>Start: {task.startDate}</p>
+                    <p>
+                      {isCompleted ? "Est End: " : "Est: "}
+                      {task.estEndDate}
+                    </p>
+                    {task.completedDate && (
+                      <p className="text-gray-600">
+                        Completed: {task.completedDate}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="mt-3.5">{renderStatusBadge(task)}</div>
                 </div>
 
-                {/* Status Badge */}
-                <div className="mt-3.5">{renderStatusBadge(task)}</div>
-              </div>
-
-              {/* Action Buttons Row */}
-              <div className="mt-4 pt-1 flex items-center gap-2">
-                {/* View Details Eye Button */}
-                <button
-                  type="button"
-                  title="View Task Details"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenDetails(task);
-                  }}
-                  className="w-10 h-8 rounded-lg border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-50 flex items-center justify-center text-gray-700 transition-colors cursor-pointer shrink-0"
-                >
-                  <Eye className="w-4 h-4 stroke-[1.75]" />
-                </button>
-
-                {/* Mark Complete Button (Only if not completed) */}
-                {!isCompleted && (
+                {/* Action Buttons Row */}
+                <div className="mt-4 pt-1 flex items-center gap-2">
+                  {/* View Details Eye Button */}
                   <button
                     type="button"
-                    disabled={markingTaskId === task.id}
+                    title="View Task Details"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleMarkComplete(task.id);
+                      handleOpenDetails(task);
                     }}
-                    className="flex-1 h-8 px-3 bg-[#1D4ED8] hover:bg-[#1E40AF] active:bg-[#1E3A8A] disabled:opacity-75 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center cursor-pointer whitespace-nowrap gap-1.5"
+                    className="w-10 h-8 rounded-lg border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-50 flex items-center justify-center text-gray-700 transition-colors cursor-pointer shrink-0"
                   >
-                    {markingTaskId === task.id ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Completing...</span>
-                      </>
-                    ) : (
-                      <span>Mark Complete</span>
-                    )}
+                    <Eye className="w-4 h-4 stroke-[1.75]" />
                   </button>
-                )}
+
+                  {/* Mark Complete Button (Only if canMarkComplete is true) */}
+                  {canMarkComplete && (
+                    <button
+                      type="button"
+                      disabled={markingTaskId === task.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkComplete(task.id);
+                      }}
+                      className="flex-1 h-8 px-3 bg-[#1D4ED8] hover:bg-[#1E40AF] active:bg-[#1E3A8A] disabled:opacity-75 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center cursor-pointer whitespace-nowrap gap-1.5"
+                    >
+                      {markingTaskId === task.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Completing...</span>
+                        </>
+                      ) : (
+                        <span>Mark Complete</span>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add Task Modal */}
       <AddConstructionTaskModal
