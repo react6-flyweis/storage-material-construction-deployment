@@ -1399,3 +1399,86 @@ export interface AddStepAttachmentApiResponse {
   data?: unknown;
 }
 
+export interface ConstructionTimelineBadge {
+  label: string;
+  tone: "success" | "danger" | "info" | "warning" | "default" | string;
+}
+
+export interface ConstructionTimelineTask {
+  _id: string;
+  id?: string;
+  title: string;
+  status: "todo" | "in_progress" | "done" | string;
+  startDate?: string | null;
+  estimatedEndDate?: string | null;
+  dueDate?: string | null;
+  completedDate?: string | null;
+  completedAt?: string | null;
+  onTimeStatus?: "pending" | "in_progress" | "overdue" | "on_time" | "early" | "late" | "unknown" | string;
+  onTime?: boolean | null;
+  daysLateOrEarly?: number;
+  daysPastDue?: number;
+  canMarkComplete?: boolean;
+  timelineBadge?: ConstructionTimelineBadge;
+  timelineStatusLine?: string;
+  description?: string;
+  workDescription?: string;
+  attachments?: string[];
+  assignedTo?: unknown;
+  priority?: string;
+  leadId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TimelineTasksApiResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    project?: {
+      leadId: string;
+      projectName?: string;
+      jobId?: string;
+    };
+    timelineTasks: ConstructionTimelineTask[];
+    total?: number;
+    stats?: {
+      total: number;
+      todo: number;
+      inProgress: number;
+      done: number;
+      overdue: number;
+    };
+    dataSource?: string;
+  };
+}
+
+export interface ConstructionTaskDetailApiResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    task: ConstructionTimelineTask;
+  };
+}
+
+export interface CompleteTaskPayload {
+  completedAt?: string;
+  completedDate?: string;
+  workDescription?: string;
+  attachments?: string[];
+}
+
+export interface CreateConstructionTaskPayload {
+  title: string;
+  leadId: string;
+  startDate?: string;
+  estimatedEndDate?: string;
+  dueDate?: string;
+  assignedTo?: string | null;
+  priority?: string;
+  description?: string;
+  workDescription?: string;
+  attachments?: string[];
+  status?: string;
+}
+
