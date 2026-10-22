@@ -1,4 +1,5 @@
 import "./instrument.ts";
+import "./lib/vite-preload-error";
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
