@@ -4,7 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import Modal from "@/components/common/Modal";
 import SuccessModal from "@/components/common/SuccessModal";
 import type { ProjectConstructionTaskItem } from "./types";
-import { updateProjectStepApi, createTaskApi } from "@/api/projects.api";
+import {
+  createConstructionTaskApi,
+  uploadConstructionMediaFlow,
+} from "@/api/projects.api";
 
 interface AddConstructionTaskModalProps {
   open: boolean;
@@ -98,50 +101,57 @@ export const AddConstructionTaskModal: React.FC<
 
     setIsSubmitting(true);
     try {
-      const stepKey = step
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
+      const uploadedUrls: string[] = [];
 
-      if (effectiveLeadId) {
-        try {
-          await updateProjectStepApi(effectiveLeadId, stepKey, {
-            status: "in_progress",
-            startDate: startDate ? new Date(startDate).toISOString() : new Date().toISOString(),
-            expectedCompletion: estEndDate ? new Date(estEndDate).toISOString() : null,
-            notes: description.trim(),
-            percentComplete: 0,
-            completionPct: 0,
-          });
-        } catch {
+      // Upload selected photos via POST /media/:leadId as specified in documentation
+      if (effectiveLeadId && photoFiles.length > 0) {
+        for (const file of photoFiles) {
           try {
-            await createTaskApi({
-              title: step.trim(),
-              description: description.trim(),
+            const res = await uploadConstructionMediaFlow({
+              file,
               leadId: effectiveLeadId,
-              assignedTo: null,
-              priority: "medium",
-              status: "in_progress",
-              dueDate: estEndDate ? new Date(estEndDate).toISOString() : new Date().toISOString(),
             });
-          } catch (taskErr) {
-            console.warn("Task API fallback notice:", taskErr);
+            const url = res?.data?.document?.url;
+            if (url) {
+              uploadedUrls.push(url);
+            }
+          } catch (uploadErr) {
+            console.warn("Failed to upload photo for task attachment:", uploadErr);
           }
         }
       }
 
-      // Invalidate queries to get fresh data from server (NO local state mutation!)
-      await queryClient.invalidateQueries({ queryKey: ["construction-phases"] });
-      await queryClient.invalidateQueries({ queryKey: ["project-details"] });
-      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
       if (effectiveLeadId) {
-        await queryClient.refetchQueries({ queryKey: ["construction-phases", effectiveLeadId] });
+        await createConstructionTaskApi({
+          title: step.trim(),
+          leadId: effectiveLeadId,
+          startDate: startDate
+            ? new Date(startDate).toISOString()
+            : new Date().toISOString(),
+          estimatedEndDate: estEndDate
+            ? new Date(estEndDate).toISOString()
+            : undefined,
+          dueDate: estEndDate
+            ? new Date(estEndDate).toISOString()
+            : undefined,
+          description: description.trim(),
+          attachments: uploadedUrls,
+          status: "in_progress",
+        });
       }
+
+      // Invalidate queries to get fresh data from server
+      await queryClient.invalidateQueries({ queryKey: ["timeline-tasks"] });
+      if (effectiveLeadId) {
+        await queryClient.refetchQueries({
+          queryKey: ["timeline-tasks", effectiveLeadId],
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["project-details"] });
 
       if (onAddTask) {
         onAddTask({
-          id: stepKey || `task-${Date.now()}`,
-          stepKey,
+          id: `task-${Date.now()}`,
           title: step.trim(),
           startDate: formatToDisplayDate(startDate) || "Scheduled",
           estEndDate: formatToDisplayDate(estEndDate) || "TBD",
@@ -149,13 +159,15 @@ export const AddConstructionTaskModal: React.FC<
           statusLabel: "In Progress",
           statusBadgeColor: "blue",
           description: description.trim(),
-          photos: photoPreviews,
+          photos: uploadedUrls.length > 0 ? uploadedUrls : photoPreviews,
+          attachments: uploadedUrls,
+          canMarkComplete: true,
         });
       }
 
       setShowSuccessModal(true);
     } catch (err) {
-      console.error("Failed to add task:", err);
+      console.error("Failed to add construction task:", err);
     } finally {
       setIsSubmitting(false);
     }
