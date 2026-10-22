@@ -48,16 +48,32 @@ export interface ProjectTaskItem {
 
 export interface ProjectConstructionTaskItem {
   id: string;
+  _id?: string;
   stepKey?: string;
   title: string;
   startDate: string;
   estEndDate: string;
+  estimatedEndDate?: string | null;
+  dueDate?: string | null;
   completedDate?: string;
-  status: "under_timeline" | "days_late" | "delayed" | "in_progress" | "completed" | string;
+  completedAt?: string | null;
+  status: "under_timeline" | "days_late" | "delayed" | "in_progress" | "completed" | "todo" | "done" | string;
   statusLabel?: string;
   statusBadgeColor?: "green" | "red" | "blue" | "amber";
+  timelineBadge?: {
+    label: string;
+    tone: "success" | "danger" | "info" | "warning" | "default" | string;
+  };
+  timelineStatusLine?: string;
+  onTimeStatus?: string;
+  onTime?: boolean | null;
+  daysLateOrEarly?: number;
+  daysPastDue?: number;
+  canMarkComplete?: boolean;
   description?: string;
+  workDescription?: string;
   photos?: string[];
+  attachments?: string[];
 }
 
 export interface ProjectPhoto {

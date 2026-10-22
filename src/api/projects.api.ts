@@ -50,6 +50,11 @@ import type {
   UpdateStepApiResponse,
   AddStepAttachmentPayload,
   AddStepAttachmentApiResponse,
+  TimelineTasksApiResponse,
+  ConstructionTaskDetailApiResponse,
+  CompleteTaskPayload,
+  CreateConstructionTaskPayload,
+  ConstructionTimelineTask,
 } from "../types/projects.types";
 
 export interface ProjectsQueryParams {
@@ -254,16 +259,24 @@ export const downloadDeliveryBillOfLadingApi = (deliveryId: string) => {
 
 export interface CreateTaskPayload {
   title: string;
-  description: string;
+  description?: string;
+  workDescription?: string;
   leadId: string | null;
-  assignedTo: string | null;
-  priority: string;
-  status: string;
-  dueDate: string;
+  assignedTo?: string | null;
+  priority?: string;
+  status?: string;
+  dueDate?: string;
+  startDate?: string;
+  estimatedEndDate?: string;
+  attachments?: string[];
 }
 
 export const createTaskApi = (payload: CreateTaskPayload) => {
   return axiosInstance.post("/construction/tasks", payload);
+};
+
+export const createConstructionTaskApi = (payload: CreateConstructionTaskPayload) => {
+  return axiosInstance.post<ConstructionTaskDetailApiResponse>("/construction/tasks", payload);
 };
 
 export interface CreateWorkLogPayload {
@@ -546,8 +559,14 @@ export const getProjectMaterialDeliveriesApi = (leadId: string) => {
   return axiosInstance.get(`/construction/projects/${leadId}/material-deliveries`);
 };
 
-export const getProjectPhasesApi = (leadId: string) => {
-  return axiosInstance.get<ConstructionPhasesApiResponse>(`/construction/projects/${leadId}/phases`);
+export const getProjectPhasesApi = (
+  leadId: string,
+  params?: { stepsScope?: string }
+) => {
+  return axiosInstance.get<ConstructionPhasesApiResponse>(
+    `/construction/projects/${leadId}/phases`,
+    { params }
+  );
 };
 
 export const getProjectProgressApi = (leadId: string) => {
@@ -575,3 +594,47 @@ export const addProjectStepAttachmentApi = (
     payload
   );
 };
+
+// Timeline Tasks endpoints (Construction Panel)
+export interface TimelineTasksQueryParams {
+  status?: string;
+  priority?: string;
+  assignedTo?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const getProjectTimelineTasksApi = (
+  leadId: string,
+  params?: TimelineTasksQueryParams
+) => {
+  return axiosInstance.get<TimelineTasksApiResponse>(
+    `/construction/projects/${leadId}/timeline-tasks`,
+    { params }
+  );
+};
+
+export const getConstructionTaskByIdApi = (taskId: string) => {
+  return axiosInstance.get<ConstructionTaskDetailApiResponse>(
+    `/construction/tasks/${taskId}`
+  );
+};
+
+export const completeConstructionTaskApi = (
+  taskId: string,
+  payload?: CompleteTaskPayload
+) => {
+  return axiosInstance.put(
+    `/construction/tasks/${taskId}/complete`,
+    payload || {}
+  );
+};
+
+export const deleteConstructionTaskApi = (taskId: string) => {
+  return axiosInstance.delete(`/construction/tasks/${taskId}`);
+};
+
+export type { ConstructionTimelineTask };
