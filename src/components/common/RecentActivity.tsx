@@ -1,5 +1,5 @@
-import React from 'react';
-import CardHeader from '../dashboard/CardHeader';
+import React from "react";
+import CardHeader from "../dashboard/CardHeader";
 
 export interface Activity {
   id: string;
@@ -16,22 +16,29 @@ interface RecentActivityProps {
   className?: string;
 }
 
-export default function RecentActivity({ activities = [], onViewAll, className = "" }: RecentActivityProps) {
+export default function RecentActivity({
+  activities = [],
+  // onViewAll,
+  className = "",
+}: RecentActivityProps) {
   const displayActivities = activities.slice(0, 5);
 
   return (
-    <div className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col h-full ${className}`}>
+    <div
+      className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col h-full ${className}`}
+    >
       <CardHeader
         title="Recent Activity"
-        action={
-          <button
-            type="button"
-            onClick={onViewAll}
-            className="text-xs font-semibold text-blue-600 bg-white border border-blue-500 hover:bg-blue-50 px-3.5 py-1.5 rounded transition-colors shadow-none cursor-pointer"
-          >
-            View All
-          </button>
-        }
+        showViewAll={false}
+        // action={
+        //   <button
+        //     type="button"
+        //     onClick={onViewAll}
+        //     className="text-xs font-semibold text-blue-600 bg-white border border-blue-500 hover:bg-blue-50 px-3.5 py-1.5 rounded transition-colors shadow-none cursor-pointer"
+        //   >
+        //     View All
+        //   </button>
+        // }
       />
 
       <div className="flex-1 flex flex-col">
