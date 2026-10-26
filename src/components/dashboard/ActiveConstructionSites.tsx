@@ -1,4 +1,5 @@
 import CardHeader from "./CardHeader";
+import { HardHat } from "lucide-react";
 import {
   formatDateDisplay,
   getDeliveryStatusBadgeClass,
@@ -29,7 +30,7 @@ export default function ActiveConstructionSites({
             {sites.length} Sites
           </span>
         }
-        onViewAll={() => navigate("/delivery-tracking")}
+        onViewAll={() => navigate("/projects?tab=project")}
       />
 
       <div className="flex-1 flex flex-col">
@@ -64,11 +65,18 @@ export default function ActiveConstructionSites({
                 ))
               ) : sites.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="py-12 text-center text-xs font-medium text-gray-400"
-                  >
-                    No active construction site data available
+                  <td colSpan={4} className="py-12">
+                    <div className="flex flex-col items-center justify-center text-center px-4">
+                      <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center mb-2 text-gray-400">
+                        <HardHat size={20} />
+                      </div>
+                      <p className="text-sm font-semibold text-gray-700">
+                        No active construction sites
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        There are currently no active sites matching the selected filters.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
