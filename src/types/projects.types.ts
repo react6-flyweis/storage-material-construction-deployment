@@ -974,11 +974,16 @@ export interface DashboardFilterBuilding {
   name: string;
   status: string;
 }
+export interface DashboardFilterBusinessUnit {
+  value: string;
+  label: string;
+}
 
 export interface DashboardFiltersData {
   projects: DashboardFilterProject[];
   buildings: DashboardFilterBuilding[];
   statuses: string[];
+  businessUnits?: DashboardFilterBusinessUnit[];
 }
 
 export interface DashboardFiltersApiResponse {
@@ -993,6 +998,7 @@ export interface DashboardQueryParams {
   buildingId?: string;
   status?: string;
   lifecycleStatus?: string;
+  businessUnit?: string;
   fromDate?: string;
   dateFrom?: string;
   toDate?: string;

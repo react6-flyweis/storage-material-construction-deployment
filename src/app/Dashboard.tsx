@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { toast } from "react-hot-toast";
@@ -16,6 +16,7 @@ import RecentActivity from "../components/common/RecentActivity";
 import ExportIcon from "../assets/exportIcon.svg";
 import SuccessModal from "../components/common/SuccessModal";
 import CustomSelect from "../components/common/CustomSelect";
+import DateRangeSelector from "../components/common/DateRangeSelector";
 import {
   ClockPlus,
   CalendarPlus,
@@ -31,7 +32,8 @@ import {
   UpcomingDeadlines,
   FreightCarriers,
 } from "../components/dashboard";
-import { formatDateDisplay, formatStatusLabel } from "../utils/dashboard.utils";
+import { formatStatusLabel } from "../utils/dashboard.utils";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const [successOpen, setSuccessOpen] = useState(false);
@@ -41,25 +43,11 @@ export default function Dashboard() {
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedBuilding, setSelectedBuilding] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  // Date picker dropdown state
-  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-  const dateDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dateDropdownRef.current &&
-        !dateDropdownRef.current.contains(e.target as Node)
-      ) {
-        setDateDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const navigate = useNavigate();
 
   // 1. Fetch dashboard filters
   const { data: filtersResponse, isLoading: isFiltersLoading } = useQuery({
@@ -71,6 +59,7 @@ export default function Dashboard() {
   const filterProjects = filterData?.projects || [];
   const filterBuildings = filterData?.buildings || [];
   const filterStatuses = filterData?.statuses || [];
+  const filterBusinessUnits = filterData?.businessUnits || [];
 
   // Options for project dropdown
   const projectOptions = useMemo(() => {
@@ -82,17 +71,17 @@ export default function Dashboard() {
   }, [filterProjects]);
 
   // Options for buildings dropdown (filtered by selected project if any)
-  const buildingOptions = useMemo(() => {
-    const available = selectedProject
-      ? filterBuildings.filter((b) => b.leadId === selectedProject)
-      : filterBuildings;
+  // const buildingOptions = useMemo(() => {
+  //   const available = selectedProject
+  //     ? filterBuildings.filter((b) => b.leadId === selectedProject)
+  //     : filterBuildings;
 
-    const list = available.map((b) => ({
-      label: b.name || `Building ${b.buildingNumber}`,
-      value: b._id,
-    }));
-    return [{ label: "All Buildings", value: "" }, ...list];
-  }, [filterBuildings, selectedProject]);
+  //   const list = available.map((b) => ({
+  //     label: b.name || `Building ${b.buildingNumber}`,
+  //     value: b._id,
+  //   }));
+  //   return [{ label: "All Buildings", value: "" }, ...list];
+  // }, [filterBuildings, selectedProject]);
 
   // Options for status dropdown
   const statusOptions = useMemo(() => {
@@ -103,16 +92,43 @@ export default function Dashboard() {
     return [{ label: "All Statuses", value: "" }, ...list];
   }, [filterStatuses]);
 
+  // Options for business units dropdown
+  const businessUnitOptions = useMemo(() => {
+    const list = filterBusinessUnits.map((bu) => ({
+      label: bu.label || bu.value,
+      value: bu.value,
+    }));
+    return [{ label: "All Business Units", value: "" }, ...list];
+  }, [filterBusinessUnits]);
+
+  // Check if any filter is active
+  const hasActiveFilters = Boolean(
+    selectedProject ||
+      selectedBuilding ||
+      selectedStatus ||
+      selectedBusinessUnit ||
+      fromDate ||
+      toDate,
+  );
+
   // Query params for dashboard API
   const queryParams = useMemo(() => {
     const params: DashboardQueryParams = {};
     if (selectedProject) params.projectId = selectedProject;
     if (selectedBuilding) params.buildingId = selectedBuilding;
     if (selectedStatus) params.status = selectedStatus;
+    if (selectedBusinessUnit) params.businessUnit = selectedBusinessUnit;
     if (fromDate) params.fromDate = fromDate;
     if (toDate) params.toDate = toDate;
     return params;
-  }, [selectedProject, selectedBuilding, selectedStatus, fromDate, toDate]);
+  }, [
+    selectedProject,
+    selectedBuilding,
+    selectedStatus,
+    selectedBusinessUnit,
+    fromDate,
+    toDate,
+  ]);
 
   // 2. Fetch dashboard data
   const { data: dashboardResponse, isLoading } = useQuery({
@@ -133,32 +149,9 @@ export default function Dashboard() {
     setSelectedProject("");
     setSelectedBuilding("");
     setSelectedStatus("");
+    setSelectedBusinessUnit("");
     setFromDate("");
     setToDate("");
-    setDateDropdownOpen(false);
-  };
-
-  const handleDatePreset = (
-    preset: "today" | "last7" | "last30" | "month" | "clear",
-  ) => {
-    if (preset === "clear") {
-      setFromDate("");
-      setToDate("");
-    } else if (preset === "today") {
-      const today = dayjs().format("YYYY-MM-DD");
-      setFromDate(today);
-      setToDate(today);
-    } else if (preset === "last7") {
-      setFromDate(dayjs().subtract(7, "day").format("YYYY-MM-DD"));
-      setToDate(dayjs().format("YYYY-MM-DD"));
-    } else if (preset === "last30") {
-      setFromDate(dayjs().subtract(30, "day").format("YYYY-MM-DD"));
-      setToDate(dayjs().format("YYYY-MM-DD"));
-    } else if (preset === "month") {
-      setFromDate(dayjs().startOf("month").format("YYYY-MM-DD"));
-      setToDate(dayjs().endOf("month").format("YYYY-MM-DD"));
-    }
-    setDateDropdownOpen(false);
   };
 
   // KPI cards
@@ -363,20 +356,6 @@ export default function Dashboard() {
     });
   }, [dashboardData]);
 
-  // Date range label
-  const dateRangeButtonLabel = useMemo(() => {
-    if (fromDate && toDate) {
-      return `${formatDateDisplay(fromDate)} - ${formatDateDisplay(toDate)}`;
-    }
-    if (fromDate) {
-      return `From ${formatDateDisplay(fromDate)}`;
-    }
-    if (toDate) {
-      return `Until ${formatDateDisplay(toDate)}`;
-    }
-    return "Date: Default (Today)";
-  }, [fromDate, toDate]);
-
   const handleExport = async () => {
     try {
       setIsExporting(true);
@@ -451,7 +430,7 @@ export default function Dashboard() {
         </div>
 
         {/* Building Filter */}
-        <div className="w-full xl:w-auto xl:flex-1 min-w-[180px]">
+        {/* <div className="w-full xl:w-auto xl:flex-1 min-w-[180px]">
           <CustomSelect
             title="All Buildings"
             options={buildingOptions}
@@ -469,7 +448,7 @@ export default function Dashboard() {
             searchable
             loading={isFiltersLoading}
           />
-        </div>
+        </div> */}
 
         {/* Status Filter */}
         <div className="w-full xl:w-auto xl:flex-1 min-w-[180px]">
@@ -484,23 +463,39 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Date Range Selector with Popover */}
-        <div
-          ref={dateDropdownRef}
-          className="relative w-full xl:w-auto xl:flex-1 min-w-[220px]"
-        >
+        {/* Business Unit Filter */}
+        <div className="w-full xl:w-auto xl:flex-1 min-w-[180px]">
+          <CustomSelect
+            title="All Business Units"
+            options={businessUnitOptions}
+            value={selectedBusinessUnit}
+            onChange={setSelectedBusinessUnit}
+            width="100%"
+            searchable
+            loading={isFiltersLoading}
+          />
+        </div>
+
+        {/* Date Range Selector */}
+        <DateRangeSelector
+          fromDate={fromDate}
+          toDate={toDate}
+          onChange={({ fromDate: newFrom, toDate: newTo }) => {
+            setFromDate(newFrom);
+            setToDate(newTo);
+          }}
+        />
+
+        {/* Reset / Restart Filter Button (only shown when any filter is active) */}
+        {hasActiveFilters && (
           <button
-            type="button"
-            onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
-            className={`bg-white border rounded text-xs sm:text-sm font-medium flex items-center justify-between w-full h-[40px] px-4 shadow-sm hover:bg-gray-50 transition-colors ${
-              fromDate || toDate
-                ? "border-blue-500 text-blue-700 font-semibold"
-                : "border-gray-200 text-gray-700"
-            }`}
+            onClick={handleResetFilters}
+            title="Reset all filters"
+            className="xl:ml-auto flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 py-2 rounded border border-gray-200 bg-white shadow-sm w-full sm:w-auto justify-center sm:justify-start hover:bg-gray-50 h-[40px]"
           >
-            <span className="truncate">{dateRangeButtonLabel}</span>
+            Reset
             <svg
-              className={`w-4 h-4 ml-2 shrink-0 ${fromDate || toDate ? "text-blue-500" : "text-gray-500"}`}
+              className="w-4 h-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -509,120 +504,11 @@ export default function Dashboard() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
           </button>
-
-          {dateDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-80 bg-white border border-gray-200 rounded shadow-xl z-50 p-4 space-y-4">
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">
-                  Filter by Date
-                </span>
-                {(fromDate || toDate) && (
-                  <button
-                    type="button"
-                    onClick={() => handleDatePreset("clear")}
-                    className="text-xs text-red-600 hover:text-red-700 font-medium"
-                  >
-                    Clear Dates
-                  </button>
-                )}
-              </div>
-
-              {/* Quick Presets */}
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleDatePreset("today")}
-                  className="px-2.5 py-1 text-xs rounded bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-medium transition-colors"
-                >
-                  Today
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDatePreset("last7")}
-                  className="px-2.5 py-1 text-xs rounded bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-medium transition-colors"
-                >
-                  Last 7 Days
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDatePreset("last30")}
-                  className="px-2.5 py-1 text-xs rounded bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-medium transition-colors"
-                >
-                  Last 30 Days
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDatePreset("month")}
-                  className="px-2.5 py-1 text-xs rounded bg-gray-100 hover:bg-blue-50 hover:text-blue-600 text-gray-700 font-medium transition-colors"
-                >
-                  This Month
-                </button>
-              </div>
-
-              {/* Custom Date Inputs */}
-              <div className="space-y-2">
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
-                    From Date
-                  </label>
-                  <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="w-full text-xs border border-gray-200 rounded px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
-                    To Date
-                  </label>
-                  <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="w-full text-xs border border-gray-200 rounded px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => setDateDropdownOpen(false)}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors shadow-sm"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Reset / Restart Filter Button */}
-        <button
-          onClick={handleResetFilters}
-          title="Reset all filters"
-          className="xl:ml-auto flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 py-2 rounded border border-gray-200 bg-white shadow-sm w-full sm:w-auto justify-center sm:justify-start hover:bg-gray-50 h-[40px]"
-        >
-          Restart
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-        </button>
+        )}
       </div>
 
       {/* Main Charts Grid */}
@@ -632,6 +518,7 @@ export default function Dashboard() {
           title="Delivery Overview"
           total={deliveryOverview?.total ?? 0}
           data={deliveryData}
+          onViewAll={() => navigate("/delivery-tracking")}
           subtitle={
             deliveryOverview?.scope === "today"
               ? "Today's Deliveries"
@@ -644,6 +531,7 @@ export default function Dashboard() {
           title="Material Request Overview"
           total={materialOverview?.total ?? 0}
           data={materialData}
+          onViewAll={() => navigate("/materials")}
           subtitle={`${materialOverview?.pendingApproval ?? 0} Pending`}
         />
 
@@ -660,6 +548,7 @@ export default function Dashboard() {
         <UpcomingDeadlines
           deadlines={upcomingDeadlinesList}
           isLoading={isLoading}
+          onViewAll={() => navigate("/projects")}
         />
 
         {/* Project Timeline (Overall) */}

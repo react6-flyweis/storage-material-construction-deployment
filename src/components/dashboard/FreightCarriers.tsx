@@ -1,6 +1,6 @@
 import CardHeader from "./CardHeader";
-import { Calendar, Clock } from "lucide-react";
-import type { DashboardFreightCarriers, DashboardFreightCarrierRow } from "../../types/projects.types";
+import { Clock, Truck } from "lucide-react";
+import type { DashboardFreightCarriers } from "../../types/projects.types";
 
 interface FreightCarriersProps {
   freightCarriers?: DashboardFreightCarriers;
@@ -9,39 +9,38 @@ interface FreightCarriersProps {
   className?: string;
 }
 
-const defaultRows: DashboardFreightCarrierRow[] = [
-  { carrierId: "1", carrierName: "Roadking Logistics", loadsToday: 12, onTime: 10, delayed: 2, priority: "On Time" },
-  { carrierId: "2", carrierName: "Swift Transport", loadsToday: 8, onTime: 8, delayed: 0, priority: "On Time" },
-  { carrierId: "3", carrierName: "Global Freight Lines", loadsToday: 5, onTime: 3, delayed: 2, priority: "Delayed" },
-  { carrierId: "4", carrierName: "Eagle Freight", loadsToday: 6, onTime: 6, delayed: 2, priority: "On Time" },
-  { carrierId: "5", carrierName: "Prime Freight", loadsToday: 3, onTime: 3, delayed: 1, priority: "Delayed" },
-];
-
 export default function FreightCarriers({
   freightCarriers,
   isLoading = false,
   className = "",
 }: FreightCarriersProps) {
-  const rows = freightCarriers?.rows && freightCarriers.rows.length > 0 ? freightCarriers.rows : defaultRows;
+  const rows = freightCarriers?.rows || [];
   const totals = freightCarriers?.totals;
 
-  const totalLoads = totals?.totalLoadsToday ?? 34;
-  const onTimeText = totals ? `${totals.onTime} (${totals.onTimePct}%)` : "29 (85.8%)";
-  const delayedText = totals ? `${totals.delayed} (${totals.delayedPct}%)` : "5 (14.7%)";
+  const totalLoads = totals?.totalLoadsToday ?? (freightCarriers ? 0 : 0);
+  const onTimeText = totals
+    ? `${totals.onTime} (${totals.onTimePct}%)`
+    : "0 (0%)";
+  const delayedText = totals
+    ? `${totals.delayed} (${totals.delayedPct}%)`
+    : "0 (0%)";
 
   return (
-    <div className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col h-full ${className}`}>
+    <div
+      className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col h-full ${className}`}
+    >
       <CardHeader
         title="Freight Carriers & Deliveries"
-        action={
-          <button
-            type="button"
-            className="text-xs font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded flex items-center gap-1.5 shadow-none transition-colors cursor-pointer"
-          >
-            <Calendar size={13} className="text-gray-500" />
-            <span>September</span>
-          </button>
-        }
+        showViewAll={false}
+        // action={
+        //   <button
+        //     type="button"
+        //     className="text-xs font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded flex items-center gap-1.5 shadow-none transition-colors cursor-pointer"
+        //   >
+        //     <Calendar size={13} className="text-gray-500" />
+        //     <span>September</span>
+        //   </button>
+        // }
       />
 
       <div className="flex-1 flex flex-col justify-between">
@@ -77,11 +76,32 @@ export default function FreightCarriers({
                     </td>
                   </tr>
                 ))
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12">
+                    <div className="flex flex-col items-center justify-center text-center px-4">
+                      <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center mb-2 text-gray-400">
+                        <Truck size={20} />
+                      </div>
+                      <p className="text-sm font-semibold text-gray-700">
+                        No carrier deliveries
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        There are no active freight carrier records or loads scheduled.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 rows.map((row, idx) => {
-                  const isOnTime = (row.priority || "").toLowerCase().includes("time") || (row.priority || "").toLowerCase().includes("track");
+                  const isOnTime =
+                    (row.priority || "").toLowerCase().includes("time") ||
+                    (row.priority || "").toLowerCase().includes("track");
                   return (
-                    <tr key={row.carrierId || idx} className="hover:bg-gray-50/50 transition-colors">
+                    <tr
+                      key={row.carrierId || idx}
+                      className="hover:bg-gray-50/50 transition-colors"
+                    >
                       <td className="py-3 pl-6 pr-2 text-sm font-bold text-gray-900">
                         {row.carrierName}
                       </td>
