@@ -7,6 +7,7 @@ interface UpcomingDeadlinesProps {
   deadlines: DashboardUpcomingDeadline[];
   isLoading?: boolean;
   onViewAll?: () => void;
+  title?: string;
   className?: string;
 }
 
@@ -14,13 +15,14 @@ export default function UpcomingDeadlines({
   deadlines,
   isLoading = false,
   onViewAll,
+  title = "Upcoming Schedule",
   className = "",
 }: UpcomingDeadlinesProps) {
   return (
     <div
       className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}
     >
-      <CardHeader title="Upcoming Project Deadlines" onViewAll={onViewAll} />
+      <CardHeader title={title} onViewAll={onViewAll} />
 
       <div className="p-6 flex-1 flex flex-col justify-between">
         <div className="space-y-6 flex-1">
@@ -46,10 +48,10 @@ export default function UpcomingDeadlines({
                 <CalendarClock size={20} />
               </div>
               <p className="text-sm font-semibold text-gray-700">
-                No upcoming deadlines
+                No upcoming schedule
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
-                There are no project deadlines within the upcoming timeframe.
+                There are no upcoming project schedules within the selected timeframe.
               </p>
             </div>
           ) : (

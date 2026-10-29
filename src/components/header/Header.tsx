@@ -1,10 +1,9 @@
 import { useLocation } from "react-router-dom";
-import SearchIcon from "../../assets/searchIcon.svg";
 import Logo from "../../assets/steel building depot logo file Final without BG.png";
-import { useSearch } from "../../context/SearchContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import NotificationButton from "./NotificationButton";
 import UserMenu from "./UserMenu";
+import HeaderSearch from "./HeaderSearch";
 
 type Props = {
   count?: number;
@@ -21,7 +20,6 @@ export default function Header({
   isPanelCollapsed,
   onPanelToggle,
 }: Props) {
-  const { search, setSearch } = useSearch();
   const location = useLocation();
 
   return (
@@ -54,18 +52,7 @@ export default function Header({
             <ChevronLeft className="w-5 h-5" />
           )}
         </button>
-        {!hideSearchOnRoutes.includes(location.pathname) && (
-          <div className="flex flex-1 sm:flex-none gap-2 items-center px-2 border border-[#D1D5DB] rounded-[8px] h-[38px] max-w-[400px]">
-            <img src={SearchIcon} alt="" className="w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="text-[14px] outline-none w-full sm:w-[130px] lg:min-w-[256px]"
-            />
-          </div>
-        )}
+        {!hideSearchOnRoutes.includes(location.pathname) && <HeaderSearch />}
       </div>
 
       <div className="flex lg:gap-8 gap-3 items-center">

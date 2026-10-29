@@ -141,7 +141,8 @@ export default function Dashboard() {
   const deliveryOverview = dashboardData?.deliveryOverview;
   const materialOverview = dashboardData?.materialRequestOverview;
   const activeSitesList = dashboardData?.activeSites || [];
-  const upcomingDeadlinesList = dashboardData?.upcomingDeadlines || [];
+  const upcomingScheduleList =
+    dashboardData?.upcomingSchedule || dashboardData?.upcomingDeadlines || [];
   const projectTimelineList = dashboardData?.projectTimelineOverall || [];
   const freightCarriers = dashboardData?.freightCarriers;
 
@@ -298,7 +299,7 @@ export default function Dashboard() {
     if (projectTimelineList.length > 0) {
       return projectTimelineList.map((step) => ({
         title: step.label,
-        date: step.date ? dayjs(step.date).format("DD/MM/YYYY") : "14/01/2024",
+        date: step.date ? dayjs(step.date).format("DD/MM/YYYY") : "-",
         status: (step.status?.toLowerCase() === "completed"
           ? "completed"
           : step.status?.toLowerCase() === "inprogress"
@@ -544,9 +545,10 @@ export default function Dashboard() {
 
       {/* Bottom Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Deadlines */}
+        {/* Upcoming Schedule */}
         <UpcomingDeadlines
-          deadlines={upcomingDeadlinesList}
+          title="Upcoming Schedule"
+          deadlines={upcomingScheduleList}
           isLoading={isLoading}
           onViewAll={() => navigate("/projects")}
         />

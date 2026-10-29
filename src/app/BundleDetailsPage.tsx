@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -299,6 +299,81 @@ export default function BundleDetailsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Reported Mismatch Section */}
+            {(bundle.hasMismatch || (bundle.mismatchItems && bundle.mismatchItems.length > 0) || bundle.mismatchNotes) && (
+              <div className="mb-8 p-5 bg-red-50/70 border border-red-200 rounded-2xl shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-red-200/60 pb-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                    <h4 className="text-base font-bold text-red-900">Reported Mismatch Details</h4>
+                  </div>
+                  {bundle.mismatchReportedAt && (
+                    <span className="text-xs text-red-700 font-medium">
+                      Reported on: {new Date(bundle.mismatchReportedAt).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+
+                {bundle.mismatchNotes && (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-red-800 uppercase tracking-wider mb-1">Notes / Reason</p>
+                    <p className="text-sm text-red-950 bg-white/90 p-3 rounded-lg border border-red-100 font-medium">
+                      {bundle.mismatchNotes}
+                    </p>
+                  </div>
+                )}
+
+                {bundle.mismatchItems && bundle.mismatchItems.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-red-800 uppercase tracking-wider mb-2">Affected Items</p>
+                    <div className="overflow-x-auto bg-white rounded-xl border border-red-200">
+                      <table className="w-full border-collapse text-left text-xs">
+                        <thead>
+                          <tr className="bg-red-100/50 text-red-900 font-bold border-b border-red-200">
+                            <th className="px-4 py-2.5">Part Code</th>
+                            <th className="px-4 py-2.5">Description</th>
+                            <th className="px-4 py-2.5 text-center">Expected Qty</th>
+                            <th className="px-4 py-2.5 text-center">Received Qty</th>
+                            <th className="px-4 py-2.5 text-center">Difference</th>
+                            <th className="px-4 py-2.5 text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-red-100">
+                          {bundle.mismatchItems.map((mItem, mIdx) => {
+                            const diff = (mItem.qty ?? 0) - (mItem.receivedQty ?? 0);
+                            return (
+                              <tr key={mItem.itemId || mIdx} className="hover:bg-red-50/30">
+                                <td className="px-4 py-2.5 font-bold text-red-950">{mItem.partCode}</td>
+                                <td className="px-4 py-2.5 text-gray-700">{mItem.description || "-"}</td>
+                                <td className="px-4 py-2.5 text-center font-semibold text-gray-900">{mItem.qty}</td>
+                                <td className="px-4 py-2.5 text-center font-bold text-gray-900">{mItem.receivedQty}</td>
+                                <td className="px-4 py-2.5 text-center font-bold text-red-600">
+                                  {diff > 0 ? `-${diff}` : diff === 0 ? "0" : `+${Math.abs(diff)}`}
+                                </td>
+                                <td className="px-4 py-2.5 text-center">
+                                  <span
+                                    className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                      mItem.status === "Received"
+                                        ? "bg-green-100 text-green-800"
+                                        : mItem.status === "Partially Received"
+                                        ? "bg-amber-100 text-amber-800"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
+                                    {mItem.status || "Mismatch"}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Bundle Items Table */}
             <div className="mt-4">
