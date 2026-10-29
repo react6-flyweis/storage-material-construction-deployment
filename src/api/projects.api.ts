@@ -15,8 +15,11 @@ import type {
   BundleScanApiResponse,
   BundleScanQueryParams,
   BundleScanProjectsApiResponse,
+  BundleScanProjectsQueryParams,
   BundleScanLoadsApiResponse,
+  BundleScanLoadsQueryParams,
   BundleScanLoadBundlesApiResponse,
+  BundleScanBundlesQueryParams,
   PackingListApiResponse,
   PackingListsQueryParams,
   PackingListDetailApiResponse,
@@ -335,16 +338,19 @@ export const getBundleScansApi = (params?: BundleScanQueryParams) => {
   return axiosInstance.get<BundleScanApiResponse>("/construction/bundle-scan", { params });
 };
 
-export const getBundleScanProjectsApi = (params?: { page?: number; limit?: number; search?: string }) => {
+export const getBundleScanProjectsApi = (params?: BundleScanProjectsQueryParams) => {
   return axiosInstance.get<BundleScanProjectsApiResponse>("/construction/bundle-scan/projects", { params });
 };
 
-export const getBundleScanLoadsApi = (leadId: string, params?: { page?: number; limit?: number }) => {
+export const getBundleScanLoadsApi = (leadId: string, params?: BundleScanLoadsQueryParams) => {
   return axiosInstance.get<BundleScanLoadsApiResponse>(`/construction/bundle-scan/projects/${leadId}/loads`, { params });
 };
 
-export const getBundleScanBundlesApi = (packingListId: string) => {
-  return axiosInstance.get<BundleScanLoadBundlesApiResponse>(`/construction/bundle-scan/loads/${packingListId}/bundles`);
+export const getBundleScanBundlesApi = (packingListId: string, params?: BundleScanBundlesQueryParams) => {
+  return axiosInstance.get<BundleScanLoadBundlesApiResponse>(
+    `/construction/bundle-scan/loads/${packingListId}/bundles`,
+    { params }
+  );
 };
 
 export const exportBundleScanApi = (params?: BundleScanQueryParams) => {
@@ -506,17 +512,20 @@ export const markBundleLoadedApi = (bundleId: string) => {
 };
 
 export interface MismatchItemPayload {
-  itemId?: string;
+  itemId: string;
   partCode?: string;
   description?: string;
   qty?: number;
-  receivedQty?: number;
+  receivedQty: number;
   status?: string;
 }
 
 export interface ReportBundleMismatchPayload {
   notes?: string;
+  reason?: string;
+  leadId?: string;
   items?: MismatchItemPayload[];
+  photos?: Array<{ name: string; url: string }>;
 }
 
 export const reportBundleMismatchApi = (bundleId: string, payload: ReportBundleMismatchPayload) => {
