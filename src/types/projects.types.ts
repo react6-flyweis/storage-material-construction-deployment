@@ -496,6 +496,15 @@ export interface BundleScanQueryParams {
   status?: "pending" | "staged" | "on_truck" | "loaded" | "all" | string;
 }
 
+export interface BundleScanProjectsQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  businessUnit?: string;
+  projectId?: string;
+}
+
 export interface BundleScanProjectListItem {
   leadId: string;
   projectId: string;
@@ -540,7 +549,32 @@ export interface BundleScanLoadItem {
   totalBundles: number;
   totalWeight: number;
   maxLengthFeet: number;
+  mismatchCount?: number;
+  hasMismatch?: boolean;
   updatedAt: string;
+}
+
+export interface BundleScanLoadsStatusCount {
+  status: string;
+  count: number;
+}
+
+export interface BundleScanLoadsStats {
+  totalLoads: number;
+  byStatus?: BundleScanLoadsStatusCount[];
+  draft?: number;
+  confirmed?: number;
+  ready?: number;
+  loading?: number;
+  deliveryCreated?: number;
+  dispatched?: number;
+  delivered?: number;
+  withMismatch?: number;
+}
+
+export interface BundleScanLoadsFilters {
+  statuses: string[];
+  sortBy: string[];
 }
 
 export interface BundleScanLoadsApiResponse {
@@ -552,7 +586,18 @@ export interface BundleScanLoadsApiResponse {
     total: number;
     page: number;
     limit: number;
+    stats?: BundleScanLoadsStats;
+    filters?: BundleScanLoadsFilters;
   };
+}
+
+export interface BundleScanLoadsQueryParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  sortBy?: "updatedAt" | "packingListNo" | "status" | "totalBundles" | "totalWeight" | string;
+  sortOrder?: "asc" | "desc";
 }
 
 export interface BundleScanBundleItem {
@@ -566,7 +611,18 @@ export interface BundleScanBundleItem {
   labelPrinted: boolean;
   labelPrintedAt: string | null;
   verified: boolean;
+  hasMismatch?: boolean;
+  mismatchNotes?: string | null;
+  mismatchReportedAt?: string | null;
+  mismatchItemCount?: number;
   updatedAt: string;
+}
+
+export interface BundleScanLoadBundlesStats {
+  total: number;
+  withMismatch: number;
+  verified: number;
+  labelPending: number;
 }
 
 export interface BundleScanLoadSummary {
@@ -586,7 +642,14 @@ export interface BundleScanLoadBundlesApiResponse {
     load: BundleScanLoadSummary;
     bundles: BundleScanBundleItem[];
     total: number;
+    stats?: BundleScanLoadBundlesStats;
   };
+}
+
+export interface BundleScanBundlesQueryParams {
+  status?: string;
+  mismatch?: boolean | string | number;
+  labelPending?: boolean | string | number;
 }
 
 export interface PackingListProject {
@@ -935,8 +998,12 @@ export interface BundleDetailInfo {
   maxLengthFeet: number;
   status: string;
   labelPrinted: boolean;
+  labelPrintedAt?: string | null;
   verified: boolean;
-  mismatchNotes: string;
+  hasMismatch?: boolean;
+  mismatchNotes?: string | null;
+  mismatchReportedAt?: string | null;
+  mismatchItemCount?: number;
   mismatchItems?: BundleMismatchItem[];
   project: {
     leadId: string;
@@ -946,8 +1013,8 @@ export interface BundleDetailInfo {
   packingList: {
     _id: string;
     packingListNo: string;
-    truckType: string;
-    truckLabel: string;
+    truckType?: string;
+    truckLabel?: string;
   };
 }
 
@@ -1146,6 +1213,7 @@ export interface DashboardResponseData {
   taskOverview?: DashboardTaskOverview;
   activeSites?: DashboardActiveSite[];
   upcomingDeadlines: DashboardUpcomingDeadline[];
+  upcomingSchedule?: DashboardUpcomingDeadline[];
   projectTimelineOverall?: DashboardTimelineItem[];
   freightCarriers?: DashboardFreightCarriers;
   recentActivity?: DashboardRecentActivityItem[];
