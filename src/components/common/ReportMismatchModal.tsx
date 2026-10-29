@@ -49,6 +49,7 @@ export default function ReportMismatchModal({
   onSuccess,
 }: ReportMismatchModalProps) {
   const [mismatchNotes, setMismatchNotes] = useState("");
+  const [mismatchReason, setMismatchReason] = useState("qty_short");
   const [itemsState, setItemsState] = useState<ItemMismatchState[]>([]);
 
   // Fetch bundle details if not passed as prop
@@ -64,13 +65,14 @@ export default function ReportMismatchModal({
   useEffect(() => {
     if (bundle?.items && bundle.items.length > 0) {
       const initialItems: ItemMismatchState[] = bundle.items.map((item: BundleItem, index: number) => {
+        const itemId = item._id || (item as any).itemId || "";
         const existingMismatch = bundle.mismatchItems?.find(
-          (m) => m.itemId === item._id
+          (m) => m.itemId === itemId
         );
 
         const itemQty = item.qty ?? 0;
         return {
-          _id: item._id || "",
+          _id: itemId,
           partCode: item.partCode || `ITEM-${index + 1}`,
           description: item.description || "-",
           qty: itemQty,
@@ -89,11 +91,12 @@ export default function ReportMismatchModal({
   }, [bundle]);
 
   const mismatchMutation = useMutation({
-    mutationFn: (payload: { notes: string; items: any[] }) =>
+    mutationFn: (payload: { notes?: string; reason?: string; leadId?: string; items?: any[] }) =>
       reportBundleMismatchApi(bundleId, payload),
     onSuccess: () => {
       onSuccess("Mismatch report submitted successfully.");
       setMismatchNotes("");
+      setMismatchReason("qty_short");
       onClose();
     },
     onError: (err: AxiosError<{ message?: string }>) => {
@@ -104,6 +107,7 @@ export default function ReportMismatchModal({
   const handleClose = () => {
     onClose();
     setMismatchNotes("");
+    setMismatchReason("qty_short");
   };
 
   const handleQtyChange = (itemId: string, rawVal: string) => {
@@ -167,14 +171,14 @@ export default function ReportMismatchModal({
   };
 
   const handleSubmitReport = () => {
-    if (itemsState.length === 0) {
-      toast.error("No items found in bundle to report mismatch for.");
+    if (!mismatchNotes.trim() && !mismatchReason) {
+      toast.error("Please provide mismatch notes or select a reason.");
       return;
     }
 
     // Client-side validation for ObjectId & status enum
     for (const item of itemsState) {
-      if (!item._id || !OBJECT_ID_REGEX.test(item._id)) {
+      if (item._id && !OBJECT_ID_REGEX.test(item._id)) {
         toast.error(
           `Invalid Item ID for "${item.partCode}". Item ID must be a valid 24-character ObjectId.`
         );
@@ -204,18 +208,22 @@ export default function ReportMismatchModal({
       }
     }
 
-    const formattedItems = itemsState.map((it) => ({
-      itemId: it._id,
-      partCode: it.partCode,
-      description: it.description,
-      qty: it.qty,
-      receivedQty: Number(it.receivedQty) || 0,
-      status: it.status,
-    }));
+    const formattedItems = itemsState
+      .filter((it) => it._id)
+      .map((it) => ({
+        itemId: it._id,
+        partCode: it.partCode,
+        description: it.description,
+        qty: it.qty,
+        receivedQty: Number(it.receivedQty) || 0,
+        status: it.status,
+      }));
 
     mismatchMutation.mutate({
-      notes: mismatchNotes,
-      items: formattedItems,
+      notes: mismatchNotes.trim() || undefined,
+      reason: mismatchReason || undefined,
+      leadId: bundle?.project?.leadId || undefined,
+      items: formattedItems.length > 0 ? formattedItems : undefined,
     });
   };
 
@@ -418,16 +426,40 @@ export default function ReportMismatchModal({
               </div>
             </div>
 
-            {/* Mismatch Notes */}
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Mismatch Notes</h3>
-              <textarea
-                placeholder="Describe any mismatch details or comments..."
-                rows={3}
-                className="w-full rounded-xl border border-gray-200 p-3 outline-none resize-none text-sm text-gray-800 focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] transition-all"
-                value={mismatchNotes}
-                onChange={(e) => setMismatchNotes(e.target.value)}
-              />
+            {/* Mismatch Reason & Notes */}
+            <div className="mb-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-1.5">
+                  Mismatch Reason <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={mismatchReason}
+                    onChange={(e) => setMismatchReason(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-gray-200 p-3 pr-10 text-sm text-gray-800 bg-white outline-none focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] cursor-pointer"
+                  >
+                    <option value="qty_short">Quantity Shortage (Fewer items received than expected)</option>
+                    <option value="damaged">Damaged in Transit / On Arrival</option>
+                    <option value="wrong_item">Wrong Item Delivered</option>
+                    <option value="missing_hardware">Missing Parts or Hardware</option>
+                    <option value="other">Other / Custom Issue</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-1.5">
+                  Mismatch Notes / Remarks
+                </label>
+                <textarea
+                  placeholder="Describe details, discrepancy notes, or instructions for the team..."
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-200 p-3 outline-none resize-none text-sm text-gray-800 focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] transition-all"
+                  value={mismatchNotes}
+                  onChange={(e) => setMismatchNotes(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Footer Actions */}
