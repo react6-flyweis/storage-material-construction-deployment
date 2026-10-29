@@ -1,10 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Calendar,
   AlertCircle,
   Building2,
   Share,
@@ -12,6 +11,7 @@ import {
   Keyboard,
   Search,
   ChevronDown,
+  X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getBundleScanProjectsApi, scanBundleScanApi } from "../api/projects.api";
@@ -21,15 +21,26 @@ import toast from "react-hot-toast";
 export default function BundleScan() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(20);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [scanModalOpen, setScanModalOpen] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["bundleScanProjects", page, limit],
+    queryKey: ["bundleScanProjects", page, limit, debouncedSearch],
     queryFn: () =>
       getBundleScanProjectsApi({
         page,
         limit,
+        search: debouncedSearch.trim() || undefined,
       }),
   });
 
@@ -84,40 +95,39 @@ export default function BundleScan() {
           </h2>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Search Input Placeholder */}
+            {/* Search Input */}
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
-                readOnly
-                placeholder="Search"
-                className="h-8 pl-8 pr-3 bg-white border border-gray-200 rounded-md text-xs font-normal text-gray-500 placeholder:text-gray-400 outline-none w-44 sm:w-52"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search project, Job ID, location..."
+                className="h-8 pl-8 pr-7 bg-white border border-gray-200 rounded-md text-xs font-normal text-gray-800 placeholder:text-gray-400 outline-none w-56 sm:w-64 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all"
               />
-            </div>
-
-            {/* All Projects Dropdown Placeholder */}
-            <div className="h-8 px-3 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 flex items-center gap-2">
-              <span>All Projects</span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-            </div>
-
-            {/* Date Range Selector Placeholder */}
-            <div className="h-8 px-3 bg-white border border-gray-200 rounded-md text-xs font-medium text-gray-700 flex items-center gap-2">
-              <span>May 1 - May 31, 2025</span>
-              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Data Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[750px]">
+          <table className="w-full text-left min-w-[850px]">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60 text-xs font-semibold text-gray-700">
                 <th className="px-5 py-3 text-left">Project ID</th>
                 <th className="px-5 py-3 text-left">Project / Site Name</th>
-                <th className="px-5 py-3 text-left">Total Packing list</th>
+                <th className="px-5 py-3 text-left">Total Packing Lists</th>
                 <th className="px-5 py-3 text-left">Total Bundles</th>
+                <th className="px-5 py-3 text-left">Labels Pending</th>
                 <th className="px-5 py-3 text-center">Actions</th>
               </tr>
             </thead>
@@ -125,7 +135,7 @@ export default function BundleScan() {
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-5 py-12 text-center text-xs text-gray-500 font-medium"
                   >
                     <div className="flex items-center justify-center gap-2">
@@ -137,7 +147,7 @@ export default function BundleScan() {
               ) : error ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-5 py-12 text-center text-xs text-red-500 font-medium"
                   >
                     <div className="flex flex-col items-center justify-center gap-1.5">
@@ -149,10 +159,10 @@ export default function BundleScan() {
               ) : projects.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-5 py-12 text-center text-xs text-gray-500 font-medium"
                   >
-                    No projects found.
+                    {debouncedSearch ? "No projects matching your search." : "No projects found."}
                   </td>
                 </tr>
               ) : (
@@ -201,6 +211,17 @@ export default function BundleScan() {
                       {/* Total Bundles */}
                       <td className="px-5 py-3.5 text-gray-800 font-medium whitespace-nowrap">
                         {proj.totalBundles ?? 0} Bundles
+                      </td>
+
+                      {/* Labels Pending */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        {(proj.labelsPending ?? 0) > 0 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            {proj.labelsPending} Pending
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 font-medium">0</span>
+                        )}
                       </td>
 
                       {/* Actions */}
