@@ -20,6 +20,9 @@ type UploadedFile = {
   key?: string;
   type?: "photo" | "video" | "drawing" | string;
   uploadedAt?: string;
+  rejectionReason?: string;
+  customerSuggestions?: string;
+  comments?: any[];
 };
 
 type UnifiedProject = {
@@ -129,7 +132,7 @@ export default function DrawingAttachment() {
     const mediaProjects = mediaData?.data?.data?.projects || [];
     for (const mp of mediaProjects) {
       const key = mp.leadId || mp.projectId || "unknown";
-      const mediaList: UploadedFile[] = (mp.documents || []).map((doc) => ({
+      const mediaList: UploadedFile[] = (mp.documents || []).map((doc: any) => ({
         id: doc._id || crypto.randomUUID(),
         name: doc.name || "Untitled Media",
         size: doc.size || "-",
@@ -138,6 +141,9 @@ export default function DrawingAttachment() {
         key: doc.url,
         type: doc.type as "photo" | "video",
         uploadedAt: doc.uploadedAt,
+        rejectionReason: doc.rejectionReason,
+        customerSuggestions: doc.customerSuggestions,
+        comments: doc.comments,
       }));
 
       projectMap.set(key, {
@@ -159,16 +165,19 @@ export default function DrawingAttachment() {
     const drawingProjects = drawingsData?.data?.data?.projects || [];
     for (const dp of drawingProjects) {
       const key = dp.leadId || dp.projectId || dp.projectName;
-      const drawingList: UploadedFile[] = (dp.documents || []).map((d) => ({
+      const drawingList: UploadedFile[] = (dp.documents || []).map((d: any) => ({
         id: d._id || crypto.randomUUID(),
         name: d.name || "Drawing",
         size: "-",
-        status: d.type
+        status: d.status || (d.type
           ? d.type.charAt(0).toUpperCase() + d.type.slice(1)
-          : "Approved",
+          : "Approved"),
         key: d.url,
         type: "drawing",
         uploadedAt: d.uploadedAt,
+        rejectionReason: d.rejectionReason,
+        customerSuggestions: d.customerSuggestions,
+        comments: d.comments,
       }));
 
       if (projectMap.has(key)) {
