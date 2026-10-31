@@ -839,6 +839,7 @@ export interface DispatchVerificationQueryParams {
   search?: string;
   sortBy?: "Latest" | "Oldest" | "Weight" | "PackingListNo" | string;
   status?: "pending" | "verified" | "dispatched" | "all" | string;
+  leadId?: string;
 }
 
 export interface DeliveryDetailsResponseData {

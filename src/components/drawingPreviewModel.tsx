@@ -1,22 +1,45 @@
 import CloseIcon from "../assets/closeicon.svg";
 import DownloadIcon from "../assets/downloadicon.svg";
-import LinkIcon from "../assets/linkicon.svg";
 import PendingImg from "../assets/drawingpreview.png";
 import ApprovedImg from "../assets/approvedimg.png";
 import RevisionImg from "../assets/revisionimg.png";
 import Modal from "./common/Modal";
 
-type DrawingPreviewModalProps = {
+export interface DrawingCommentUser {
+  _id?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface DrawingComment {
+  _id?: string;
+  text?: string;
+  comment?: string;
+  commentedBy?: string | DrawingCommentUser | null;
+  commentedByCustomer?: DrawingCommentUser | null;
+  authorName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type DrawingPreviewModalProps = {
   open: boolean;
   onClose: () => void;
   fileId: string;
   file: {
     id: string;
     name: string;
-    size: string;
+    size?: string;
     status: string;
     key?: string;
     type?: string;
+    rejectionReason?: string;
+    customerSuggestions?: string;
+    comments?: DrawingComment[];
+    uploadedAt?: string;
   } | null;
   project?: {
     name: string;
@@ -65,6 +88,50 @@ export default function DrawingPreviewModal({
     }
   };
 
+  const getLatestCommentText = () => {
+    if (file?.comments && file.comments.length > 0) {
+      const sorted = [...file.comments].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+      return sorted[0]?.text || sorted[0]?.comment || "";
+    }
+    return file?.customerSuggestions || "";
+  };
+
+  const customerSuggestionText = getLatestCommentText();
+
+  const getStatusBadgeStyle = (status?: string) => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("approved")) {
+      return "bg-[#DCFCE7] text-[#16A34A] border-[#BBF7D0]";
+    }
+    if (s.includes("revision") || s.includes("required") || s.includes("rejected")) {
+      return "bg-[#FFF7ED] text-[#FF9409] border-[#FFEDD5]";
+    }
+    if (s.includes("pending")) {
+      return "bg-[#FEFAE2] text-[#F0CC16] border-[#FEFAE2]";
+    }
+    return "bg-gray-100 text-gray-700 border-gray-200";
+  };
+
+  const getDisplayStatusText = (status?: string) => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("rejected")) {
+      return "Revision Requested";
+    }
+    return status || "Pending";
+  };
+
+  const hasRevision =
+    (currentStatus &&
+      (currentStatus.toLowerCase().includes("revision") ||
+        currentStatus.toLowerCase().includes("required") ||
+        currentStatus.toLowerCase().includes("rejected"))) ||
+    Boolean(file?.rejectionReason) ||
+    Boolean(customerSuggestionText);
+
   return (
     <Modal
       open={open}
@@ -86,10 +153,6 @@ export default function DrawingPreviewModal({
                 <p>{project?.location || "—"}</p>
               </div>
               <div>
-                <p className="text-[#6B7280] max-w-[200px] min-w-[100px]">Uploaded By</p>
-                <p>{project?.uploadedBy || "—"}</p>
-              </div>
-              <div>
                 <p className="text-[#6B7280] max-w-[200px] min-w-[100px]">Last Updated</p>
                 <p>{project?.updatedOn || "—"}</p>
               </div>
@@ -100,7 +163,7 @@ export default function DrawingPreviewModal({
             src={CloseIcon}
             className="w-4 cursor-pointer mt-2 md:mt-0"
             onClick={onClose}
-            alt=""
+            alt="Close"
           />
         </div>
 
@@ -127,49 +190,53 @@ export default function DrawingPreviewModal({
           )}
         </div>
 
-        <div className="lg:px-6 px-3 py-4 flex sm:flex-row flex-col gap-3 sm:justify-between items-end sm:items-center border-t">
-          <button 
-            onClick={handleDownload}
-            className="flex items-center gap-2 bg-[#2563EB] text-white px-5 py-1.5 rounded-full w-fit hover:bg-blue-700 transition"
-          >
-            <img src={DownloadIcon} className="brightness-[10]" alt="" />
-            Download
-          </button>
-
-          <div className="flex gap-3 items-center">
-            {currentStatus !== "Pending Review" && currentStatus !== "Pending" && (
-              <>
-                <p className="text-black text-sm">{project?.updatedOn || "—"}</p>
-              </>
-            )}
-            {currentStatus !== "Approved" && (
-              <button className="bg-[#F59E0B] text-white px-6 py-1 rounded-full">
-                {currentStatus === "Revision Required" || currentStatus === "Revision"
-                  ? "Sent for Revision"
-                  : "Revision Required"}
-              </button>
-            )}
-            {currentStatus !== "Revision Required" && currentStatus !== "Revision" && (
-              <button className="bg-[#22C55E] text-white px-6 py-1 rounded-full">
-                {currentStatus === "Approved" ? "Approved" : "Approve"}
-              </button>
-            )}
-          </div>
-        </div>
-        {(currentStatus === "Pending Review" || currentStatus === "Pending") && (
-          <div className="lg:px-6 px-3 py-3 border-t flex sm:gap-4 gap-2 items-center">
-            <div className="h-[40px] border rounded-lg flex items-center gap-1 flex-1 sm:px-4 px-2">
-              <input
-                placeholder="Type your Comment..."
-                className="flex-1 outline-none"
-              />
-              <img src={LinkIcon} alt="" />
-            </div>
-            <button className="bg-[#2563EB] text-white sm:px-6 px-3 py-2 h-10 rounded-lg">
-              Send <span className="hidden sm:inline-block">Comment</span>
+        {/* Footer / Action Section as in Plant Panel */}
+        <div className="lg:px-6 px-4 py-4 border-t space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button 
+              onClick={handleDownload}
+              className="flex items-center gap-2 bg-[#2563EB] text-white px-5 py-2 rounded-full text-xs md:text-sm font-medium hover:bg-blue-700 transition shadow-xs cursor-pointer"
+            >
+              <img src={DownloadIcon} className="brightness-[10]" alt="" />
+              Download
             </button>
+
+            {currentStatus && (
+              <div className="flex items-center gap-3 ml-auto flex-wrap">
+                {project?.updatedOn && (
+                  <p className="text-gray-600 text-xs md:text-sm font-normal">
+                    {project.updatedOn}
+                  </p>
+                )}
+                <span
+                  className={`px-4 md:px-6 py-1.5 rounded-full text-xs md:text-sm font-medium border ${getStatusBadgeStyle(
+                    currentStatus
+                  )}`}
+                >
+                  {getDisplayStatusText(currentStatus)}
+                </span>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Revision Messages Section */}
+          {hasRevision && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 pt-4 border-t border-gray-100">
+              <div className="space-y-2">
+                <h3 className="text-sm md:text-base font-bold text-gray-900">Revision Message</h3>
+                <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+                  {file?.rejectionReason || "—"}
+                </p>
+              </div>
+              <div className="space-y-2 border-l-0 md:border-l border-gray-200 md:pl-6">
+                <h3 className="text-sm md:text-base font-bold text-gray-900">Customer Suggestions</h3>
+                <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+                  {customerSuggestionText || "—"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
     </Modal>
   );
 }

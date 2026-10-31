@@ -10,6 +10,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
+export { default as DrawingPreviewModal } from "./drawingPreviewModel";
+export * from "./drawingPreviewModel";
+
 const maxMediaSizeMB = 200;
 
 export type DrawingModelProps = {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Search,
   ChevronDown,
@@ -50,12 +51,23 @@ const formatWeight = (weight?: number) => {
 };
 
 export default function DispatchVerification() {
+  const [searchParams] = useSearchParams();
+  const querySearch =
+    searchParams.get("search") ||
+    searchParams.get("project") ||
+    searchParams.get("projectName") ||
+    "";
+  const queryLeadId = searchParams.get("leadId") || "";
+  const queryStatus =
+    searchParams.get("status") ||
+    (querySearch || queryLeadId ? "all" : "pending");
+
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch] = useState(querySearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(querySearch);
   const [sortBy, setSortBy] = useState("Oldest");
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState(queryStatus);
   const [filterOpen, setFilterOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -64,6 +76,24 @@ export default function DispatchVerification() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    const s =
+      searchParams.get("search") ||
+      searchParams.get("project") ||
+      searchParams.get("projectName") ||
+      "";
+    const st = searchParams.get("status");
+    if (s && s !== search) {
+      setSearch(s);
+      setDebouncedSearch(s);
+      setPage(1);
+    }
+    if (st && st !== statusFilter) {
+      setStatusFilter(st);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -100,6 +130,7 @@ export default function DispatchVerification() {
       debouncedSearch,
       sortBy,
       statusFilter,
+      queryLeadId,
     ],
     queryFn: () =>
       getDispatchVerificationApi({
@@ -108,6 +139,7 @@ export default function DispatchVerification() {
         search: debouncedSearch || undefined,
         sortBy: sortBy || undefined,
         status: statusFilter || undefined,
+        leadId: queryLeadId || undefined,
       }),
   });
 
