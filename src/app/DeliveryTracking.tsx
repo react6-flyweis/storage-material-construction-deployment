@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
@@ -46,6 +47,8 @@ const formatStatusText = (status?: string) => {
 };
 
 export default function DeliveryTracking() {
+  const navigate = useNavigate();
+
   // Pagination & sorting
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);
@@ -436,6 +439,9 @@ export default function DeliveryTracking() {
       title: item.materialType || item.description || "Delivery",
       subtitle: item.project?.projectName || item.project?.jobId || "-",
       leadId: item.project?.leadId || "",
+      projectName: item.project?.projectName || "",
+      jobId: item.project?.jobId || "",
+      project: item.project,
       badges,
       material: {
         qty: formattedWeight,
@@ -1224,19 +1230,23 @@ export default function DeliveryTracking() {
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedDelivery({
-                          id: item.deliveryId,
-                          number: item.id,
-                        });
-                        setPartialOpen(true);
+                        if (item.leadId) {
+                          navigate(
+                            `/delivery-tracking/bundle-scan/projects/${item.leadId}/loads`,
+                            {
+                              state: {
+                                project: item.project,
+                              },
+                            }
+                          );
+                        } else {
+                          navigate("/delivery-tracking/bundle-scan");
+                        }
                       }}
-                      disabled={markPartialMutation.isPending}
-                      className="bg-[#1D51A4] text-white py-3 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="bg-[#1D51A4] text-white py-3 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
                     >
                       <Info className="w-3.5 h-3.5" />
-                      {markPartialMutation.isPending
-                        ? "Marking..."
-                        : "Partial Received"}
+                      Partial Received
                     </button>
                   </div>
                 )}
