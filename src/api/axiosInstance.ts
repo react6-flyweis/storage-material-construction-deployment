@@ -40,12 +40,31 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedRequestsQueue = [];
 };
 
+const isAuthEndpoint = (url?: string) => {
+  if (!url) return false;
+  return (
+    url.includes("/auth/login") ||
+    url.includes("/auth/refresh") ||
+    url.includes("/auth/logout") ||
+    url.includes("/auth/forgot-password") ||
+    url.includes("/auth/verify-otp") ||
+    url.includes("/auth/reset-password") ||
+    url.includes("/loginWithPhone") ||
+    url.includes("/signup")
+  );
+};
+
 axiosInstance.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthEndpoint(originalRequest.url)
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedRequestsQueue.push({
@@ -71,8 +90,12 @@ axiosInstance.interceptors.response.use(
 
       const refreshToken = useAuthStore.getState().refreshToken;
       if (!refreshToken) {
+        isRefreshing = false;
+        processQueue(error, null);
         useAuthStore.getState().logout();
-        window.location.href = redirectUrl;
+        if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
+          window.location.href = redirectUrl;
+        }
         return Promise.reject(error);
       }
 
@@ -92,7 +115,9 @@ axiosInstance.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         useAuthStore.getState().logout();
-        window.location.href = redirectUrl;
+        if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
+          window.location.href = redirectUrl;
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
