@@ -41,10 +41,11 @@ function Login() {
     } catch (error: unknown) {
       const message = getApiErrorMessage(error, "Failed to log in");
       setError("root", { type: "server", message });
+      const statusCode = (error as { response?: { status?: number } })?.response?.status;
       Sentry.captureMessage("Failed sign-in attempt", {
         level: "warning",
         extra: {
-          statusCode: 200,
+          statusCode: statusCode ?? 400,
           authProvider: "local",
           email: data.email,
           responseMessage: message,
