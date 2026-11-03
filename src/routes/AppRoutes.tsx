@@ -9,6 +9,7 @@ import ErrorBoundary, { RouterErrorFallback } from "../pages/ErrorPage";
 const Dashboard = lazy(() => import("../app/Dashboard"));
 const Projects = lazy(() => import("../app/Projects"));
 const Tasks = lazy(() => import("../app/Tasks"));
+const DailyWorkLogs = lazy(() => import("../app/DailyWorkLogs"));
 const Materials = lazy(() => import("../app/Materials"));
 const Reports = lazy(() => import("../app/Reports"));
 const Communication = lazy(() => import("../app/Communication"));
@@ -16,13 +17,20 @@ const Notifications = lazy(() => import("../app/Notifications"));
 const MaterialsViewPage = lazy(() => import("../app/MaterialsViewPage"));
 const ProjectViewPage = lazy(() => import("../app/ProjectViewPage"));
 const DrawingAttachment = lazy(() => import("../app/DrawingAttachment"));
+const BOMFilesDetailsPage = lazy(() => import("../app/BOMFilesDetailsPage"));
+const ProjectDrawingsPage = lazy(() => import("../app/ProjectDrawingsPage"));
+const DeliveryDetailsPage = lazy(() => import("../app/DeliveryDetailsPage"));
 const Login = lazy(() => import("../components/home/login"));
 const ProfilePage = lazy(() => import("../app/Profile"));
 const SettingPage = lazy(() => import("../app/Settings"));
 const ForgotPassword = lazy(() => import("../components/home/forgotpassword"));
+const ResetPassword = lazy(() => import("../components/home/resetpassword"));
 const DeliveryTracking = lazy(() => import("../app/DeliveryTracking"));
 const LoadStaging = lazy(() => import("../app/LoadStaging"));
 const BundleScan = lazy(() => import("../app/BundleScan"));
+const BundleScanLoads = lazy(() => import("../app/BundleScanLoads"));
+const BundleScanBundles = lazy(() => import("../app/BundleScanBundles"));
+const BundleDetailsPage = lazy(() => import("../app/BundleDetailsPage"));
 const LabelPrinting = lazy(() => import("../app/LabelPrinting"));
 const PackingLists = lazy(() => import("../app/PackingLists"));
 const DispatchVerification = lazy(() => import("../app/DispatchVerification"));
@@ -39,6 +47,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Route>
 
           <Route element={<ProtectedRoute />}>
@@ -53,9 +62,21 @@ const AppRoutes = () => {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/:id" element={<ProjectViewPage />} />
+              <Route path="/projects/:id/view-bom" element={<BOMFilesDetailsPage />} />
+              <Route path="/projects/:id/bom" element={<BOMFilesDetailsPage />} />
+              <Route path="/bom-details/:id" element={<BOMFilesDetailsPage />} />
+              <Route path="/projects/:id/view-drawings" element={<ProjectDrawingsPage />} />
+              <Route path="/projects/:id/drawings" element={<ProjectDrawingsPage />} />
+              <Route path="/projects/:id/material-delivery" element={<DeliveryDetailsPage />} />
+              <Route path="/delivery-details/:id" element={<DeliveryDetailsPage />} />
+              <Route path="/projects/:id/delivery-details/:deliveryId" element={<DeliveryDetailsPage />} />
               <Route path="/project-view-page" element={<ProjectViewPage />} />
+              <Route path="/project-details" element={<ProjectViewPage />} />
               <Route path="/drawing-attachment" element={<DrawingAttachment />} />
               <Route path="/tasks" element={<Tasks />} />
+              <Route path="/tasks/work-logs" element={<DailyWorkLogs />} />
+              <Route path="/work-logs" element={<DailyWorkLogs />} />
               <Route path="/materials" element={<Materials />} />
               <Route path="/material-view-page" element={<MaterialsViewPage />} />
               <Route path="/reports" element={<Reports />} />
@@ -64,6 +85,12 @@ const AppRoutes = () => {
               <Route path="/delivery-tracking" element={<DeliveryTracking />} />
               <Route path="/delivery-tracking/load-staging" element={<LoadStaging />} />
               <Route path="/delivery-tracking/bundle-scan" element={<BundleScan />} />
+              <Route path="/delivery-tracking/bundle-scan/projects/:leadId/loads" element={<BundleScanLoads />} />
+              <Route path="/delivery-tracking/bundle-scan/projects/:leadId" element={<BundleScanLoads />} />
+              <Route path="/delivery-tracking/bundle-scan/loads/:packingListId/bundles" element={<BundleScanBundles />} />
+              <Route path="/delivery-tracking/bundle-scan/loads/:packingListId" element={<BundleScanBundles />} />
+              <Route path="/delivery-tracking/bundle-scan/bundles/:bundleId" element={<BundleDetailsPage />} />
+              <Route path="/delivery-tracking/bundle-scan/bundles/:bundleId/details" element={<BundleDetailsPage />} />
               <Route path="/delivery-tracking/label-printing" element={<LabelPrinting />} />
               <Route path="/delivery-tracking/packing-lists" element={<PackingLists />} />
               <Route path="/delivery-tracking/dispatch-verification" element={<DispatchVerification />} />

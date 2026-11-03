@@ -13,6 +13,8 @@ import RightArrowIcon from "../../assets/right-arrow.svg";
 import DeliveryTrackingIcon from "../../assets/delivery-tracking.svg";
 import { useSidebar } from "../../context/SidebarContext";
 import { useAuthStore } from "../../store/authStore";
+import { useChatUnreadCountQuery } from "@/modules/team-chat/team-chat.hooks";
+import { useUnreadNotificationCountQuery } from "@/modules/notifications/notifications.hooks";
 
 type SidebarSubTab = {
   label: string;
@@ -28,7 +30,7 @@ type SidebarTab = {
   subTabs?: SidebarSubTab[];
 };
 
-export const SIDEBAR_TABS: SidebarTab[] = [
+const SIDEBAR_TABS: SidebarTab[] = [
   {
     key: "dashboard",
     icon: DashboardIcon,
@@ -53,6 +55,10 @@ export const SIDEBAR_TABS: SidebarTab[] = [
     path: "/tasks",
     label: "Tasks & Progress",
     bg: "#FD8D5B",
+    subTabs: [
+      { label: "Task Board", path: "/tasks" },
+      { label: "Daily Work Logs", path: "/work-logs" },
+    ],
   },
   {
     key: "materials",
@@ -69,13 +75,16 @@ export const SIDEBAR_TABS: SidebarTab[] = [
     bg: "#1D51A4",
     subTabs: [
       { label: "Delivery Tracking", path: "/delivery-tracking" },
-      { label: "Label Printing", path: "/delivery-tracking/label-printing" },
-      { label: "Bundle Scan", path: "/delivery-tracking/bundle-scan" },
-      { label: "Packing Lists", path: "/delivery-tracking/packing-lists" },
+      // { label: "Label Printing", path: "/delivery-tracking/label-printing" },
       {
         label: "Dispatch Verification",
-        path: "/delivery-tracking/dispatch-verification",
+        path: "/delivery-tracking/bundle-scan",
       },
+      // { label: "Packing Lists", path: "/delivery-tracking/packing-lists" },
+      // {
+      //   label: "Dispatch Verification",
+      //   path: "/delivery-tracking/dispatch-verification",
+      // },
     ],
   },
   {
@@ -106,6 +115,21 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
   const { activeDate } = useSidebar();
   const { user } = useAuthStore();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const { data: chatUnread } = useChatUnreadCountQuery();
+  const { data: notificationUnread } = useUnreadNotificationCountQuery();
+
+  const getTabBadge = (key: string) => {
+    if (key === "communication") {
+      const c = chatUnread?.total ?? chatUnread?.count ?? 0;
+      return c > 0 ? (c > 99 ? "99+" : c) : null;
+    }
+    if (key === "notifications") {
+      const n = notificationUnread ?? 0;
+      return n > 0 ? (n > 99 ? "99+" : n) : null;
+    }
+    return null;
+  };
 
   const activeTab =
     SIDEBAR_TABS.find((tab) => {
@@ -143,7 +167,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
           transform transition-all duration-300 ease-in-out
           ${open ? "translate-x-0" : "-translate-x-full lg:static lg:translate-x-0"}
           flex shadow-xl shrink-0
-          ${isCollapsed ? "w-[67px]" : "w-[280px] sm:w-[258px]"}
+          ${isCollapsed ? "w-[67px]" : "w-[280px]"}
         `}
       >
         {/* Left Icon Strip */}
@@ -162,6 +186,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
             {SIDEBAR_TABS.map((tab, index) => {
               const isActive = activeTab === tab.key;
               const isHovered = hoveredIndex === index;
+              const badge = getTabBadge(tab.key);
 
               return (
                 <div
@@ -178,15 +203,27 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                     className="relative z-20 flex items-center justify-center w-full h-full focus:outline-none"
                   >
                     {isActive && (
-                      <img src={SidenavigationIcon} alt="" className="absolute right-0" />
+                      <img
+                        src={SidenavigationIcon}
+                        alt=""
+                        className="absolute right-0"
+                      />
                     )}
 
-                    <img
-                      src={tab.icon}
-                      alt={tab.label}
-                      className={`transition-transform hover:scale-105 ${isActive ? "relative z-10" : ""
+                    <div className="relative flex items-center justify-center">
+                      <img
+                        src={tab.icon}
+                        alt={tab.label}
+                        className={`transition-transform hover:scale-105 ${
+                          isActive ? "relative z-10" : ""
                         }`}
-                    />
+                      />
+                      {badge && (
+                        <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#1D51A4] shadow-sm leading-none z-20 pointer-events-none select-none">
+                          {badge}
+                        </span>
+                      )}
+                    </div>
                   </button>
 
                   {/* Tooltip Popover */}
@@ -218,12 +255,21 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                       {/* Colored icon circle */}
                       <span
                         className="flex items-center justify-center rounded-full"
-                        style={{ width: 38, height: 38, flexShrink: 0, backgroundColor: tab.bg }}
+                        style={{
+                          width: 38,
+                          height: 38,
+                          flexShrink: 0,
+                          backgroundColor: tab.bg,
+                        }}
                       >
                         <img
                           src={tab.icon}
                           alt={tab.label}
-                          style={{ width: 26, height: 26, objectFit: "contain" }}
+                          style={{
+                            width: 26,
+                            height: 26,
+                            objectFit: "contain",
+                          }}
                         />
                       </span>
                       {/* Page name */}
@@ -237,6 +283,11 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                       >
                         {tab.label}
                       </span>
+                      {badge && (
+                        <span className="ml-1 min-w-[18px] h-[18px] px-1.5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                          {badge}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -247,15 +298,20 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
 
         {/* Right Panel - Subtabs and Info */}
         <div
-          className={`flex-1 transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0 invisible" : "w-auto opacity-100 visible"
-            }`}
+          className={`flex-1 transition-all duration-300 overflow-hidden ${
+            isCollapsed
+              ? "w-0 opacity-0 invisible"
+              : "w-auto opacity-100 visible"
+          }`}
         >
-          <div className="pl-5 py-[14px] min-w-[191px]">
+          <div className="pl-4 pr-3.5 py-[14px] min-w-[200px]">
             <div className="mb-4 pr-2">
               <h1 className="text-[17px] font-bold text-[#1D51A4]">
                 Construction Panel
               </h1>
-              <p className="text-[14px] text-[#272C42]">{user?.email || "const@steelpro.com"}</p>
+              <p className="text-[14px] text-[#272C42]">
+                {user?.email || "const@steelpro.com"}
+              </p>
             </div>
 
             <div className="flex gap-2 items-center mb-6">
@@ -273,7 +329,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1 pr-4">
+            <div className="flex flex-col gap-1.5 w-full">
               {SIDEBAR_TABS.map((tab) => {
                 const isTabActive = activeTab === tab.key;
                 if (!isTabActive) return null;
@@ -290,23 +346,26 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                               if (window.innerWidth < 1024) setOpen(false);
                               navigate(sub.path);
                             }}
+                            title={sub.label}
                             style={
                               isSubActive
                                 ? {
-                                  backgroundColor: tab.bg,
-                                  color: "#ffffff",
-                                  borderColor: tab.bg,
-                                }
+                                    backgroundColor: tab.bg,
+                                    color: "#ffffff",
+                                    borderColor: tab.bg,
+                                  }
                                 : {
-                                  backgroundColor: "#ffffff",
-                                  color: "#1a1a1a",
-                                  borderColor: "transparent",
-                                  boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-                                }
+                                    backgroundColor: "#ffffff",
+                                    color: "#1a1a1a",
+                                    borderColor: "transparent",
+                                    boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                                  }
                             }
-                            className="h-[44px] w-full px-4 rounded-xl text-sm font-bold transition-all flex items-center border-2"
+                            className="min-h-[42px] w-full px-3.5 py-2.5 rounded-md text-[13.5px] font-semibold transition-all flex items-center justify-start text-left border-2 leading-tight"
                           >
-                            {sub.label}
+                            <span className="truncate whitespace-nowrap text-left">
+                              {sub.label}
+                            </span>
                           </button>
                         );
                       })
@@ -316,14 +375,17 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                           if (window.innerWidth < 1024) setOpen(false);
                           navigate(tab.path);
                         }}
+                        title={tab.label}
                         style={{
                           backgroundColor: tab.bg,
                           color: "#ffffff",
                           borderColor: tab.bg,
                         }}
-                        className="h-[44px] w-full px-4 rounded-xl shadow-sm text-sm font-bold flex items-center border-2"
+                        className="min-h-[42px] w-full px-3.5 py-2.5 rounded-md shadow-sm text-[13.5px] font-semibold flex items-center justify-start text-left border-2 leading-tight"
                       >
-                        {tab.label}
+                        <span className="truncate whitespace-nowrap text-left">
+                          {tab.label}
+                        </span>
                       </button>
                     )}
                   </div>

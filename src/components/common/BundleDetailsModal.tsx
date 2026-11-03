@@ -5,13 +5,15 @@ import { useState } from "react";
 import {
   getBundleDetailsApi,
   verifyBundleApi,
-  markBundleStagedApi,
-  markBundleLoadedApi,
+  // markBundleStagedApi,
+  // markBundleLoadedApi,
   reprintBundleLabelApi,
 } from "../../api/projects.api";
 import ReportMismatchModal from "./ReportMismatchModal";
 import SuccessModal from "./SuccessModal";
 import Modal from "./Modal";
+import QRCodeDataModal from "./QRCodeDataModal";
+import { getQRCodeUrl, formatValue } from "../../lib/utils";
 
 type BundleDetailsModalProps = {
   open: boolean;
@@ -23,6 +25,7 @@ type BundleDetailsModalProps = {
 export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: BundleDetailsModalProps) {
   const queryClient = useQueryClient();
   const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successModalTitle, setSuccessModalTitle] = useState("");
 
@@ -39,34 +42,35 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
       setSuccessModalTitle("Bundle Verified Successfully!");
       setSuccessModalOpen(true);
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to verify bundle");
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error?.response?.data?.message || "Failed to verify bundle");
     },
   });
 
-  const stageMutation = useMutation({
-    mutationFn: () => markBundleStagedApi(bundleId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
-      setSuccessModalTitle("Bundle Marked as Staged!");
-      setSuccessModalOpen(true);
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to mark bundle as staged");
-    },
-  });
+  // const stageMutation = useMutation({
+  //   mutationFn: () => markBundleStagedApi(bundleId),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
+  //     setSuccessModalTitle("Bundle Marked as Staged!");
+  //     setSuccessModalOpen(true);
+  //   },
+  //   onError: (err: any) => {
+  //     toast.error(err?.response?.data?.message || "Failed to mark bundle as staged");
+  //   },
+  // });
 
-  const loadMutation = useMutation({
-    mutationFn: () => markBundleLoadedApi(bundleId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
-      setSuccessModalTitle("Bundle Marked as Loaded!");
-      setSuccessModalOpen(true);
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to mark bundle as loaded");
-    },
-  });
+  // const loadMutation = useMutation({
+  //   mutationFn: () => markBundleLoadedApi(bundleId),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
+  //     setSuccessModalTitle("Bundle Marked as Loaded!");
+  //     setSuccessModalOpen(true);
+  //   },
+  //   onError: (err: any) => {
+  //     toast.error(err?.response?.data?.message || "Failed to mark bundle as loaded");
+  //   },
+  // });
 
   const reprintMutation = useMutation({
     mutationFn: () => reprintBundleLabelApi(bundleId),
@@ -75,14 +79,41 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
       setSuccessModalTitle("Label Reprinted Successfully!");
       setSuccessModalOpen(true);
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to reprint label");
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error?.response?.data?.message || "Failed to reprint label");
     },
   });
 
   if (!open) return null;
 
   const bundle = response?.data?.data?.bundle;
+
+  const targetBundleId = bundle?.bundleId || bundleId || bundle?.bundleNo || "";
+  const partsList =
+    bundle?.items
+      ?.map((item) => item.partCode)
+      .filter(Boolean)
+      .join(", ") || "";
+
+  const qrDataObj = bundle
+    ? {
+        project: (bundle.project?.projectName || "").replace(/\s+/g, ""),
+        shipper: bundle.project?.jobId || "",
+        load_id: bundle.packingList?.packingListNo || "",
+        bundle_id: bundle.bundleNo || targetBundleId,
+        parts: partsList.replace(/\s+/g, ""),
+        weight: formatValue(bundle.totalWeight),
+        length: formatValue(bundle.maxLengthFeet),
+      }
+    : "";
+
+  const standaloneBase = import.meta.env.VITE_STANDLONE_PAGE_BASE || "";
+  const qrCodeUrl = targetBundleId
+    ? getQRCodeUrl(`${standaloneBase.replace(/\/+$/, "")}/bundle/${targetBundleId}`, "250x250")
+    : bundle
+    ? getQRCodeUrl(qrDataObj, "250x250")
+    : "";
 
   const formatStatus = (status?: string) => {
     if (!status) return "-";
@@ -147,7 +178,7 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                 {verifyMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Verify Bundle
               </button>
-              <button
+              {/* <button
                 onClick={() => loadMutation.mutate()}
                 disabled={loadMutation.isPending}
                 className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -162,7 +193,7 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
               >
                 {stageMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Mark Staged
-              </button>
+              </button> */}
             </div>
           </div>
 
@@ -244,28 +275,22 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">Scanned QR Code</h3>
                   <div className="flex items-start gap-6">
-                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="border border-gray-200 p-2 rounded-lg bg-white shadow-sm flex-shrink-0">
-                      <rect x="10" y="10" width="30" height="30" stroke="black" strokeWidth="6" fill="none" />
-                      <rect x="18" y="18" width="14" height="14" fill="black" />
-
-                      <rect x="80" y="10" width="30" height="30" stroke="black" strokeWidth="6" fill="none" />
-                      <rect x="88" y="18" width="14" height="14" fill="black" />
-
-                      <rect x="10" y="80" width="30" height="30" stroke="black" strokeWidth="6" fill="none" />
-                      <rect x="18" y="88" width="14" height="14" fill="black" />
-
-                      <rect x="50" y="20" width="10" height="10" fill="black" />
-                      <rect x="60" y="35" width="10" height="10" fill="black" />
-                      <rect x="20" y="55" width="10" height="15" fill="black" />
-                      <rect x="40" y="50" width="15" height="10" fill="black" />
-                      <rect x="55" y="65" width="10" height="10" fill="black" />
-                      <rect x="85" y="55" width="10" height="10" fill="black" />
-                      <rect x="95" y="70" width="15" height="10" fill="black" />
-                      <rect x="70" y="80" width="10" height="10" fill="black" />
-                      <rect x="60" y="95" width="15" height="15" fill="black" />
-                      <rect x="85" y="90" width="10" height="10" fill="black" />
-                      <rect x="100" y="95" width="10" height="10" fill="black" />
-                    </svg>
+                    <button
+                      type="button"
+                      onClick={() => setIsQrModalOpen(true)}
+                      className="w-30 h-30 border border-gray-200 p-2 rounded-lg bg-white shadow-sm shrink-0 flex items-center justify-center hover:border-purple-300 hover:shadow-md transition-all group relative cursor-pointer"
+                      title="Click to view QR label preview"
+                    >
+                      {qrCodeUrl ? (
+                        <img
+                          src={qrCodeUrl}
+                          alt={`QR Code for bundle ${bundle.bundleNo || bundleId}`}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-xs text-gray-400 font-medium">No QR Code</div>
+                      )}
+                    </button>
 
                     <div className="flex-1 min-w-0">
                       <h4 className="text-base font-bold text-gray-900 mb-2 truncate">project={bundle.project?.projectName?.replace(/\s+/g, '') || "-"}</h4>
@@ -306,15 +331,15 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                 </div>
               </div>
 
-              {/* Items List Table */}
+              {/* Bundle Items Table */}
               <div className="mt-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Items List</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Bundle Items</h3>
                 <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-[#1C1F25] text-white">
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider w-12">#</th>
-                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Description</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Part Code / Description</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Qty</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Length</th>
                         <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Weight</th>
@@ -325,13 +350,24 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
                       {bundle.items?.map((item, index) => (
                         <tr key={item._id || index} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-4 py-4 text-sm font-bold text-gray-400">{index + 1}</td>
-                          <td className="px-4 py-4 text-sm font-bold text-gray-700">{item.description || "-"}</td>
-                          <td className="px-4 py-4 text-sm font-semibold text-gray-600">{item.qty}</td>
+                          <td className="px-4 py-4 text-sm font-bold text-gray-700">
+                            {item.partCode ? (
+                              <span>
+                                <span className="text-[#1D51A4] font-bold">{item.partCode}</span>
+                                {item.description ? ` - ${item.description}` : ""}
+                              </span>
+                            ) : (
+                              item.description || "-"
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-sm font-semibold text-gray-600">{item.qty ?? "-"}</td>
                           <td className="px-4 py-4 text-sm font-semibold text-gray-500">
-                            {item.lengthFeet ? `${Number(item.lengthFeet).toFixed(2)} FT` : "-"}
+                            {item.lengthFeet !== undefined && item.lengthFeet !== null ? `${Number(item.lengthFeet).toFixed(2)} FT` : "-"}
                           </td>
                           <td className="px-4 py-4 text-sm font-bold text-gray-700">
-                            {item.totalWeight ? `${Number(item.totalWeight).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} LBS` : "-"}
+                            {item.totalWeight || item.weight
+                              ? `${Number(item.totalWeight || item.weight).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} LBS`
+                              : "-"}
                           </td>
                           <td className="px-4 py-4 text-sm font-medium text-gray-500">
                             {item.markIds?.join(", ") || "-"}
@@ -352,6 +388,7 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
         open={isMismatchModalOpen}
         onClose={() => setIsMismatchModalOpen(false)}
         bundleId={bundleId}
+        bundle={bundle}
         onSuccess={(message) => {
           queryClient.invalidateQueries({ queryKey: ["bundleDetails", bundleId] });
           setSuccessModalTitle(message);
@@ -365,6 +402,24 @@ export default function BundleDetailsModal({ open, onClose, bundleId, onBack }: 
         title={successModalTitle}
         onClose={() => setSuccessModalOpen(false)}
       />
+
+      {/* QR Code Data Modal */}
+      {bundle && (
+        <QRCodeDataModal
+          open={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          data={{
+            projectName: bundle.project?.projectName || "",
+            shipperRef: bundle.project?.jobId || "",
+            loadId: bundle.packingList?.packingListNo || "",
+            id: bundle.bundleNo || targetBundleId,
+            parts: partsList,
+            weight: bundle.totalWeight,
+            length: bundle.maxLengthFeet,
+            bundleId: targetBundleId,
+          }}
+        />
+      )}
     </>
   );
 }

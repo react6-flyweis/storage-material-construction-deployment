@@ -1,275 +1,243 @@
-import { useState, useEffect } from "react";
-import { Search, ChevronDown, Download, ArrowUpDown, QrCode, Keyboard } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  Building2,
+  Share,
+  QrCode,
+  Keyboard,
+  Search,
+  ChevronDown,
+  X,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getBundleScansApi, scanBundleScanApi } from "../api/projects.api";
-import CustomSelect from "../components/common/CustomSelect";
+import { getBundleScanProjectsApi, scanBundleScanApi } from "../api/projects.api";
 import ScanQRCodeModal from "../components/common/ScanQRCodeModal";
-import BundleDetailsModal from "../components/common/BundleDetailsModal";
-
-
-const formatStatus = (status?: string) => {
-  if (!status) return "-";
-  return status
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
-
-const formatParts = (parts?: string) => {
-  if (!parts) return "-";
-  const cleaned = parts
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .join(", ");
-  return cleaned || "-";
-};
-
-const formatWeight = (weight?: number) => {
-  if (weight === undefined || weight === null) return "-";
-  return `${weight.toLocaleString()} LBS`;
-};
-
-const formatScannedTime = (scannedAt?: string) => {
-  if (!scannedAt) return "-";
-  const date = new Date(scannedAt);
-  if (isNaN(date.getTime())) return "-";
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-};
+import toast from "react-hot-toast";
 
 export default function BundleScan() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sortBy, setSortBy] = useState("Latest");
-  const [statusFilter, setStatusFilter] = useState("");
-
-  // Modals state
-  const [scanOpen, setScanOpen] = useState(false);
-  const [resultOpen, setResultOpen] = useState(false);
-  const [selectedBundleId, setSelectedBundleId] = useState("");
+  const [scanModalOpen, setScanModalOpen] = useState(false);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
+    const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
-    }, 400);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    }, 300);
+    return () => clearTimeout(timer);
   }, [search]);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["bundleScans", page, limit, debouncedSearch, sortBy, statusFilter],
+    queryKey: ["bundleScanProjects", page, limit, debouncedSearch],
     queryFn: () =>
-      getBundleScansApi({
+      getBundleScanProjectsApi({
         page,
         limit,
-        search: debouncedSearch || undefined,
-        sortBy: sortBy || undefined,
-        status: statusFilter || undefined,
+        search: debouncedSearch.trim() || undefined,
       }),
   });
 
   const apiData = data?.data?.data;
-  const bundles = apiData?.bundles || [];
+  const projects = useMemo(() => apiData?.projects || [], [apiData?.projects]);
   const total = apiData?.total || 0;
-  const apiStats = apiData?.stats;
-
   const totalPages = Math.ceil(total / limit) || 1;
 
-  const stats = [
-    { title: "Bundles Scanned", value: apiStats?.bundlesScanned ?? 0, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Bundles Remaining", value: apiStats?.bundlesRemaining ?? 0, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { title: "Bundles Loaded", value: apiStats?.bundlesLoaded ?? 0, color: "text-yellow-600", bg: "bg-yellow-50" },
-  ];
-
   return (
-    <div className="mx-auto pb-10 space-y-6">
-      {/* Header */}
+    <div className="mx-auto pb-10 space-y-5">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Bundle Scan</h1>
-          <p className="text-sm font-medium text-gray-500 max-w-2xl">Scan bundle QR codes to verify staging, loading, and dispatch readiness.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+            Dispatch Verification
+          </h1>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <button
 
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all"
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-white border border-gray-200 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-xs transition-all"
           >
-            <Download className="w-4 h-4" />
-            Export
+            <Share className="w-3.5 h-3.5 text-gray-600" />
+            <span>Export</span>
           </button>
           <button
-
-            onClick={() => setScanOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-750 shadow-sm hover:bg-gray-50 transition-all"
+            type="button"
+            onClick={() => setScanModalOpen(true)}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-md text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
-            <QrCode className="w-4 h-4" />
-            Scan QR Code
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Scan QR Code</span>
           </button>
           <button
-            onClick={() => setScanOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#6366F1] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-blue-100 hover:opacity-90 transition-all"
+            type="button"
+            onClick={() => setScanModalOpen(true)}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#6366F1] hover:bg-[#5558E6] text-white rounded-md text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
-            <Keyboard className="w-4 h-4" />
-            Manual Entry
+            <Keyboard className="w-3.5 h-3.5" />
+            <span>Manual Entry</span>
           </button>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-50">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">{stat.title}</p>
-              <div className={`p-2 rounded-xl ${stat.bg}`}>
-                <QrCode className={`w-5 h-5 ${stat.color}`} />
-              </div>
+      {/* Projects Table Container */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
+        {/* Table Title and Controls */}
+        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
+          <h2 className="text-sm sm:text-base font-bold text-gray-900">
+            Project List
+          </h2>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search project, Job ID, location..."
+                className="h-8 pl-8 pr-7 bg-white border border-gray-200 rounded-md text-xs font-normal text-gray-800 placeholder:text-gray-400 outline-none w-56 sm:w-64 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
-            {isLoading ? (
-              <div className="h-8 w-20 bg-gray-100 animate-pulse rounded-lg mb-2" />
-            ) : (
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 tracking-tight">
-                {stat.value}
-              </h3>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Table Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search bundle history..."
-            className="w-full h-11 pl-10 pr-4 bg-white border border-gray-100 rounded-xl text-sm font-bold outline-none shadow-sm focus:border-blue-500 transition-all duration-200"
-          />
-        </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <CustomSelect
-            title="Filter by Status"
-            options={[
-              { label: "All Statuses", value: "" },
-              { label: "Pending", value: "pending" },
-              { label: "Assigned to Truck", value: "assigned_to_truck" },
-              { label: "Dispatched", value: "dispatched" },
-            ]}
-            value={statusFilter}
-            onChange={(val) => {
-              setStatusFilter(val);
-              setPage(1);
-            }}
-            width="180px"
-          />
-
-          <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 flex items-center justify-between sm:justify-start gap-3 shadow-sm relative h-[40px]">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort by :</span>
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value);
-                setPage(1);
-              }}
-              className="appearance-none bg-transparent text-xs font-bold text-gray-900 pr-6 outline-none cursor-pointer"
-            >
-              <option value="Latest">Latest</option>
-              <option value="Oldest">Oldest</option>
-              <option value="Weight">Weight</option>
-            </select>
-            <ChevronDown className="w-3 h-3 text-gray-900 absolute right-4 pointer-events-none" />
           </div>
         </div>
-      </div>
 
-      {/* History Table */}
-      <div className="bg-white rounded-[24px] border border-gray-50 shadow-sm overflow-hidden flex flex-col">
-        <div className="px-4 sm:px-8 py-5 border-b border-gray-50">
-          <h3 className="text-lg font-bold text-gray-900 tracking-tight">Bundle scan History</h3>
-        </div>
-        <div className="overflow-x-auto scroll-hide">
-          <table className="w-full text-left min-w-[900px]">
+        {/* Data Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[850px]">
             <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-50">
-                <th className="px-6 py-4 w-12">
-                  <div className="w-5 h-5 border-2 border-gray-200 rounded-md cursor-pointer hover:border-blue-400" />
-                </th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Project / Site</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Bundle ID</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Parts</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                  <div className="flex items-center gap-1.5 cursor-pointer group">
-                    Total Weight <ArrowUpDown className="w-3 h-3 group-hover:text-blue-500 transition-colors" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Time</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">Action</th>
+              <tr className="border-b border-gray-100 bg-gray-50/60 text-xs font-semibold text-gray-700">
+                <th className="px-5 py-3 text-left">Project ID</th>
+                <th className="px-5 py-3 text-left">Project / Site Name</th>
+                <th className="px-5 py-3 text-left">Total Packing Lists</th>
+                <th className="px-5 py-3 text-left">Total Bundles</th>
+                <th className="px-5 py-3 text-left">Labels Pending</th>
+                <th className="px-5 py-3 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-100 text-xs">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500 font-medium">
-                    Loading bundle scans...
+                  <td
+                    colSpan={6}
+                    className="px-5 py-12 text-center text-xs text-gray-500 font-medium"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#6366F1]" />
+                      <span>Loading projects...</span>
+                    </div>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-sm text-red-500 font-medium">
-                    Failed to load bundle scans. Please try again.
+                  <td
+                    colSpan={6}
+                    className="px-5 py-12 text-center text-xs text-red-500 font-medium"
+                  >
+                    <div className="flex flex-col items-center justify-center gap-1.5">
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                      <span>Failed to load projects.</span>
+                    </div>
                   </td>
                 </tr>
-              ) : bundles.length === 0 ? (
+              ) : projects.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500 font-medium">
-                    No bundle scans found.
+                  <td
+                    colSpan={6}
+                    className="px-5 py-12 text-center text-xs text-gray-500 font-medium"
+                  >
+                    {debouncedSearch ? "No projects matching your search." : "No projects found."}
                   </td>
                 </tr>
               ) : (
-                bundles.map((row, i) => {
-                  const rowId = row.bundleId || row.bundleNo;
+                projects.map((proj) => {
+                  const displayJobId =
+                    proj.jobId || proj.projectId || `PRJ-${proj.leadId.slice(-4).toUpperCase()}`;
+
                   return (
-                    <tr key={rowId || i} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-6 py-5">
-                        <div className="w-5 h-5 border-2 border-gray-200 rounded-md cursor-pointer group-hover:border-blue-400 transition-all" />
+                    <tr
+                      key={proj.leadId}
+                      onClick={() =>
+                        navigate(
+                          `/delivery-tracking/bundle-scan/projects/${proj.leadId}/loads`,
+                          { state: { project: proj } }
+                        )
+                      }
+                      className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
+                    >
+                      {/* Project ID */}
+                      <td className="px-5 py-3.5 font-bold text-gray-900 tracking-tight whitespace-nowrap">
+                        {displayJobId}
                       </td>
-                      <td className="px-6 py-5">
-                        <p className="text-xs font-bold text-gray-900 mb-1 leading-tight">
-                          {row.project?.projectName || "N/A"}
-                        </p>
-                        <p className="text-[10px] font-bold text-gray-400">
-                          {row.project?.jobId || "-"}
-                        </p>
+
+                      {/* Project / Site Name */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-8 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors truncate">
+                              {proj.projectName || "Unnamed Project"}
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                              {proj.location || "N/A"}
+                            </p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-5 text-xs font-bold text-gray-400">{row.bundleNo || "-"}</td>
-                      <td className="px-6 py-5 text-xs font-bold text-gray-900">{formatParts(row.parts)}</td>
-                      <td className="px-6 py-5 text-xs font-bold text-gray-900">{formatWeight(row.totalWeight)}</td>
-                      <td className="px-6 py-5 text-xs font-bold text-gray-500">{formatScannedTime(row.scannedAt)}</td>
-                      <td className="px-6 py-5">
-                        <span className={`
-                          px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit
-                          ${row.status === "pending" ? "bg-yellow-50 text-yellow-600" :
-                            row.status === "assigned_to_truck" ? "bg-blue-50 text-blue-600" :
-                              "bg-green-50 text-green-600"}
-                        `}>
-                          {formatStatus(row.status)}
-                        </span>
+
+                      {/* Total Packing list */}
+                      <td className="px-5 py-3.5 text-gray-800 font-medium whitespace-nowrap">
+                        {proj.totalLoads ?? 0}
                       </td>
-                      <td className="px-6 py-5 text-right">
+
+                      {/* Total Bundles */}
+                      <td className="px-5 py-3.5 text-gray-800 font-medium whitespace-nowrap">
+                        {proj.totalBundles ?? 0} Bundles
+                      </td>
+
+                      {/* Labels Pending */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        {(proj.labelsPending ?? 0) > 0 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            {proj.labelsPending} Pending
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 font-medium">0</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td
+                        className="px-5 py-3.5 text-center whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
-                          onClick={() => {
-                            setSelectedBundleId(rowId);
-                            setResultOpen(true);
-                          }}
-                          className="bg-[#1D51A4] text-white px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-blue-800 transition-all shadow-sm"
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/delivery-tracking/bundle-scan/projects/${proj.leadId}/loads`,
+                              { state: { project: proj } }
+                            )
+                          }
+                          className="px-3.5 py-1 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-xs font-medium rounded-md shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           View
                         </button>
@@ -282,46 +250,55 @@ export default function BundleScan() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="px-4 sm:px-8 py-6 bg-gray-50/30 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 order-2 sm:order-1">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Showing</p>
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1);
-              }}
-              className="bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-900 shadow-sm outline-none cursor-pointer"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Results</p>
+        {/* Pagination Footer */}
+        <div className="px-5 py-3.5 bg-white border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs text-gray-500 font-normal">
+            <span>Showing</span>
+            <div className="relative inline-flex items-center">
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="bg-white border border-gray-200 rounded-md pl-2 pr-6 py-0.5 text-xs font-medium text-gray-700 outline-none cursor-pointer appearance-none"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-1.5 pointer-events-none" />
+            </div>
+            <span>Results</span>
           </div>
-          <div className="flex items-center gap-2 order-1 sm:order-2">
+
+          <div className="flex items-center gap-1.5">
             <button
               disabled={page === 1}
               onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-              className="p-2 text-gray-300 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-400 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronDown className="w-4 h-4 rotate-90" />
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .filter(
+                  (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1
+                )
                 .map((p, idx, arr) => {
                   const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
                   return (
-                    <div key={p} className="flex items-center gap-1">
-                      {showEllipsis && <span className="text-gray-400 px-1">...</span>}
+                    <div key={p} className="flex items-center gap-1.5">
+                      {showEllipsis && (
+                        <span className="text-gray-400 text-xs px-0.5">-</span>
+                      )}
                       <button
                         onClick={() => setPage(p)}
-                        className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${page === p
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
-                          : "text-gray-400 hover:bg-white hover:text-gray-900"
-                          }`}
+                        className={`w-7 h-7 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center justify-center ${
+                          page === p
+                            ? "border border-[#8B5CF6] text-[#8B5CF6] bg-white shadow-2xs"
+                            : "text-gray-600 hover:bg-gray-50 border border-transparent"
+                        }`}
                       >
                         {p}
                       </button>
@@ -332,30 +309,22 @@ export default function BundleScan() {
             <button
               disabled={page === totalPages}
               onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-              className="p-2 text-gray-300 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-400 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronDown className="w-4 h-4 -rotate-90" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
+      {/* QR Code / Manual Entry Modal */}
       <ScanQRCodeModal
-        open={scanOpen}
-        onClose={() => setScanOpen(false)}
+        open={scanModalOpen}
+        onClose={() => setScanModalOpen(false)}
         scanApiFn={scanBundleScanApi}
-        onScanSuccess={(bundleId) => {
-          setSelectedBundleId(bundleId);
-          setResultOpen(true);
-        }}
-      />
-
-      <BundleDetailsModal
-        open={resultOpen}
-        onClose={() => setResultOpen(false)}
-        bundleId={selectedBundleId}
-        onBack={() => {
-          setResultOpen(false);
+        onScanSuccess={() => {
+          setScanModalOpen(false);
+          toast.success("Bundle scanned successfully");
         }}
       />
     </div>

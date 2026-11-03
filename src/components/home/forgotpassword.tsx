@@ -1,130 +1,313 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import bgImage from "../../assets/AuthBackgroundImg.jpg";
-import Input from "../common/Input";
-import Button from "../common/Button";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  useForgotPasswordMutation,
+  useVerifyOtpMutation,
+} from "@/modules/auth/auth.hooks";
+import { AuthLayout } from "@/components/auth-layout";
+import { ArrowLeft, KeyRound, Mail } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 
-function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+const requestOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+});
 
+const verifyOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+  otp: z
+    .string()
+    .trim()
+    .min(1, "OTP is required")
+    .length(6, "OTP must be exactly 6 digits")
+    .regex(/^\d+$/, "OTP must contain only numbers"),
+});
+
+type RequestOtpFormValues = z.infer<typeof requestOtpSchema>;
+type VerifyOtpFormValues = z.infer<typeof verifyOtpSchema>;
+
+export default function ForgotPassword() {
   const navigate = useNavigate();
+  const [step, setStep] = useState<"request" | "verify">("request");
+  const [targetEmail, setTargetEmail] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitted(true);
+  const forgotPasswordMutation = useForgotPasswordMutation();
+  const verifyOtpMutation = useVerifyOtpMutation();
+
+  const requestForm = useForm<RequestOtpFormValues>({
+    resolver: zodResolver(requestOtpSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const verifyForm = useForm<VerifyOtpFormValues>({
+    resolver: zodResolver(verifyOtpSchema),
+    defaultValues: {
+      email: "",
+      otp: "",
+    },
+  });
+
+  const handleRequestOtp = async (data: RequestOtpFormValues) => {
+    setErrorMessage(null);
+    setInfoMessage(null);
+
+    try {
+      // Construction panel sends role 'construction'
+      const response = await forgotPasswordMutation.mutateAsync({
+        email: data.email,
+        role: "construction",
+      });
+
+      if (!response.success) {
+        setErrorMessage(
+          response.message || "Failed to send OTP. Please try again.",
+        );
+        return;
+      }
+
+      setInfoMessage(
+        response.message || "If that email exists, an OTP has been sent.",
+      );
+      setTargetEmail(data.email);
+      verifyForm.setValue("email", data.email);
+      setStep("verify");
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(error, "Unable to process request. Please try again later."),
+      );
+    }
   };
 
-  const handleBackToLogin = () => {
-    navigate("/");
+  const handleVerifyOtp = async (data: VerifyOtpFormValues) => {
+    setErrorMessage(null);
+
+    try {
+      const response = await verifyOtpMutation.mutateAsync({
+        email: data.email,
+        otp: data.otp,
+      });
+
+      if (!response.success) {
+        setErrorMessage(response.message || "Invalid OTP");
+        return;
+      }
+
+      const resetToken = response.data?.resetToken;
+
+      if (!resetToken) {
+        setErrorMessage("Reset token missing from server response.");
+        return;
+      }
+
+      navigate("/reset-password", {
+        state: { resetToken, email: data.email },
+        replace: true,
+      });
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(error, "Invalid OTP or server error. Please try again."),
+      );
+    }
   };
+
+  const title = step === "request" ? "Forgot Password?" : "Verify OTP";
+  const subtitle =
+    step === "request"
+      ? "Enter your email address and we'll send you an OTP to reset your password"
+      : `Enter the verification code sent to ${targetEmail}`;
 
   return (
-    <div
-      className="min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat relative px-4 sm:px-6 lg:px-8"
-      style={{ backgroundImage: `url(${bgImage})` }}
-    >
-      <div className="w-full max-w-[500px] bg-white rounded-[10px] shadow-2xl p-4 sm:p-10 md:p-12 relative z-10 mx-auto">
-        {!isSubmitted ? (
-          <>
-            <div className="text-center mb-10">
-              <h1 className="md:text-2xl text-xl text-[#1d7bd8] sm:text-3xl font-medium mb-2">
-                Forgot Password?
-              </h1>
-              <p className="text-(--text-color-gray) text-sm sm:text-base">
-                Enter your email and we'll send you a reset link
-              </p>
-            </div>
+    <AuthLayout title={title} subtitle={subtitle}>
+      {infoMessage ? (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+          {infoMessage}
+        </div>
+      ) : null}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+      {errorMessage ? (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      {step === "request" ? (
+        <form
+          onSubmit={requestForm.handleSubmit(handleRequestOtp)}
+          className="my-6 space-y-6"
+        >
+          <div>
+            <Label
+              htmlFor="email"
+              className="text-sm font-medium text-gray-700"
+            >
+              E-mail address
+            </Label>
+            <div className="relative mt-1.5">
               <Input
                 id="email"
-                label="E-mail"
                 type="email"
                 placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                {...requestForm.register("email")}
+                className="h-12 rounded-lg border-gray-200 pl-10 placeholder:text-gray-400"
               />
-
-              <Button title="Send Reset Link" className="w-full" type="submit" />
-
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={handleBackToLogin}
-                  className="text-sm font-normal text-[#1d7bd8] hover:opacity-80 transition-colors"
-                >
-                  ← Back to Login
-                </button>
-              </div>
-            </form>
-          </>
-        ) : (
-          <>
-            <div className="text-center mb-10">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-8 h-8 text-green-600"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                  />
-                </svg>
-              </div>
-              <h1 className="md:text-2xl text-xl text-[#1d7bd8] sm:text-3xl font-medium mb-2">
-                Check Your Email
-              </h1>
-              <p className="text-(--text-color-gray) text-sm sm:text-base mb-2">
-                We've sent a password reset link to
-              </p>
-              <p className="text-(--primary-color) font-medium text-sm sm:text-base mb-6">
-                {email}
-              </p>
-              <p className="text-(--text-color-gray) text-xs sm:text-sm">
-                Didn't receive the email? Check your spam folder or
-              </p>
+              <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             </div>
+            {requestForm.formState.errors.email ? (
+              <p className="mt-1.5 text-xs text-red-500">
+                {requestForm.formState.errors.email.message}
+              </p>
+            ) : null}
+          </div>
 
-            <div className="space-y-4">
-              <Button title="Resend Link" type="button" className="!w-full" onClick={() => setIsSubmitted(false)} />
-
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleBackToLogin}
-                  className="text-sm font-normal text-[#1d7bd8] hover:opacity-80 transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="w-4 h-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-                    />
-                  </svg>
-                  Back to Login
-                </button>
-              </div>
+          <Button
+            type="submit"
+            disabled={forgotPasswordMutation.isPending}
+            className="h-12 w-full bg-[#1d7bd8] text-base font-medium text-white hover:bg-[#1668b8] cursor-pointer"
+          >
+            {forgotPasswordMutation.isPending ? "Sending OTP..." : "Send OTP"}
+          </Button>
+        </form>
+      ) : (
+        <form
+          onSubmit={verifyForm.handleSubmit(handleVerifyOtp)}
+          className="my-6 space-y-6"
+        >
+          <div>
+            <Label
+              htmlFor="email-verify"
+              className="text-sm font-medium text-gray-700"
+            >
+              E-mail address
+            </Label>
+            <div className="relative mt-1.5">
+              <Input
+                id="email-verify"
+                type="email"
+                {...verifyForm.register("email")}
+                className="h-12 rounded-lg border-gray-200 pl-10 placeholder:text-gray-400 bg-gray-50"
+                readOnly
+              />
+              <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             </div>
-          </>
-        )}
+            {verifyForm.formState.errors.email ? (
+              <p className="mt-1.5 text-xs text-red-500">
+                {verifyForm.formState.errors.email.message}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <Label
+              htmlFor="otp"
+              className="text-sm font-medium text-gray-700"
+            >
+              Verification OTP
+            </Label>
+            <div className="relative mt-1.5">
+              <Input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
+                placeholder="Enter 6-digit OTP"
+                {...verifyForm.register("otp", {
+                  onChange: (e) => {
+                    const cleaned = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    e.target.value = cleaned;
+                    verifyForm.setValue("otp", cleaned, { shouldValidate: true });
+                  },
+                })}
+                onKeyDown={(e) => {
+                  if (
+                    [
+                      "Backspace",
+                      "Delete",
+                      "Tab",
+                      "Escape",
+                      "Enter",
+                      "ArrowLeft",
+                      "ArrowRight",
+                      "ArrowUp",
+                      "ArrowDown",
+                    ].includes(e.key) ||
+                    e.ctrlKey ||
+                    e.metaKey
+                  ) {
+                    return;
+                  }
+                  if (!/^\d$/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pasteData = e.clipboardData.getData("text");
+                  const digits = pasteData.replace(/\D/g, "").slice(0, 6);
+                  verifyForm.setValue("otp", digits, { shouldValidate: true });
+                }}
+                className="h-12 rounded-lg border-gray-200 pl-10 tracking-widest placeholder:tracking-normal placeholder:text-gray-400"
+                maxLength={6}
+              />
+              <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            </div>
+            {verifyForm.formState.errors.otp ? (
+              <p className="mt-1.5 text-xs text-red-500">
+                {verifyForm.formState.errors.otp.message}
+              </p>
+            ) : null}
+          </div>
+
+          <Button
+            type="submit"
+            disabled={verifyOtpMutation.isPending}
+            className="h-12 w-full bg-[#1d7bd8] text-base font-medium text-white hover:bg-[#1668b8] cursor-pointer"
+          >
+            {verifyOtpMutation.isPending ? "Verifying..." : "Verify OTP"}
+          </Button>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setStep("request");
+                setErrorMessage(null);
+                setInfoMessage(null);
+              }}
+              className="text-xs text-gray-500 hover:text-[#1d7bd8] hover:underline cursor-pointer"
+            >
+              Resend OTP / Change Email
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="mt-6 text-center">
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-1.5 text-sm text-[#1d7bd8] hover:underline"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Sign In
+        </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 }
-
-export default ForgotPassword;

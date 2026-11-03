@@ -32,3 +32,36 @@ export const refreshApi = (refreshToken: string) => {
 export const logoutApi = () => {
   return axiosInstance.post("/auth/logout");
 };
+
+export const forgotPasswordApi = (payload: {
+  email: string;
+  role?: string;
+}) => {
+  return axiosInstance.post("/auth/forgot-password", payload);
+};
+
+export const verifyOtpApi = (payload: {
+  email: string;
+  otp: string;
+}) => {
+  return axiosInstance.post("/auth/verify-otp", payload);
+};
+
+export const resetPasswordApi = (payload: {
+  resetToken: string;
+  newPassword: string;
+}) => {
+  return axiosInstance.post(
+    "/auth/reset-password",
+    {
+      resetToken: payload.resetToken,
+      newPassword: payload.newPassword,
+      password: payload.newPassword,
+    },
+    {
+      headers: payload.resetToken
+        ? { Authorization: `Bearer ${payload.resetToken}` }
+        : undefined,
+    }
+  );
+};

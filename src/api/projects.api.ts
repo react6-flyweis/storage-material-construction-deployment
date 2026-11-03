@@ -1,15 +1,79 @@
+import type { AxiosError } from "axios";
 import { axiosInstance } from "./axiosInstance";
-import type { ProjectsApiResponse, ProjectDetailsApiResponse, CalendarApiResponse, DrawingsApiResponse, TasksApiResponse, DeliveriesApiResponse, DeliveryDetailsApiResponse, LabelsApiResponse, LabelsQueryParams, BundleScanApiResponse, BundleScanQueryParams, PackingListApiResponse, PackingListsQueryParams, PackingListDetailApiResponse, DispatchVerificationApiResponse, DispatchVerificationDetailApiResponse, DispatchVerificationQueryParams, MaterialRequestsApiResponse, MaterialRequestsQueryParams, MaterialRequest, BundleDetailsApiResponse, DashboardApiResponse } from "../types/projects.types";
+import type {
+  ProjectsApiResponse,
+  ProjectDetailsApiResponse,
+  CalendarApiResponse,
+  DrawingsApiResponse,
+  TasksApiResponse,
+  DeliveriesApiResponse,
+  DeliveriesQueryParams,
+  DeliveryFiltersApiResponse,
+  DeliveryDetailsApiResponse,
+  LabelsApiResponse,
+  LabelsQueryParams,
+  BundleScanApiResponse,
+  BundleScanQueryParams,
+  BundleScanProjectsApiResponse,
+  BundleScanProjectsQueryParams,
+  BundleScanLoadsApiResponse,
+  BundleScanLoadsQueryParams,
+  BundleScanLoadBundlesApiResponse,
+  BundleScanBundlesQueryParams,
+  PackingListApiResponse,
+  PackingListsQueryParams,
+  PackingListDetailApiResponse,
+  DispatchVerificationApiResponse,
+  DispatchVerificationDetailApiResponse,
+  DispatchVerificationQueryParams,
+  MaterialRequestsApiResponse,
+  MaterialRequestsQueryParams,
+  MaterialRequestsFiltersApiResponse,
+  MaterialRequest,
+  BundleDetailsApiResponse,
+  DashboardApiResponse,
+  DashboardFiltersApiResponse,
+  DashboardQueryParams,
+  ConsolidatedBOMApiResponse,
+  BuildingDrawingsApiResponse,
+  PresignedUrlPayload,
+  PresignedUrlApiResponse,
+  AttachMediaPayload,
+  AttachMediaApiResponse,
+  ConstructionMediaQueryParams,
+  ConstructionMediaApiResponse,
+  ConstructionMediaProject,
+  MediaDocument,
+  CreateDeliveryPayload,
+  CreateDeliveryApiResponse,
+  WorkLogsApiResponse,
+  GetWorkLogsParams,
+  ConstructionPhasesApiResponse,
+  UpdateStepPayload,
+  UpdateStepApiResponse,
+  AddStepAttachmentPayload,
+  AddStepAttachmentApiResponse,
+  TimelineTasksApiResponse,
+  ConstructionTaskDetailApiResponse,
+  CompleteTaskPayload,
+  CreateConstructionTaskPayload,
+  ConstructionTimelineTask,
+} from "../types/projects.types";
 
 export interface ProjectsQueryParams {
   page?: number;
   limit?: number;
+  status?: string;
+  priority?: string;
+  search?: string;
+  hasDelivery?: boolean | number | string;
 }
 
 export interface CalendarQueryParams {
   month: number;
   year: number;
   leadId?: string;
+  projectId?: string;
 }
 
 export const getProjectsApi = (params?: ProjectsQueryParams) => {
@@ -28,16 +92,154 @@ export const getDrawingsApi = () => {
   return axiosInstance.get<DrawingsApiResponse>("/construction/drawings");
 };
 
+export type { ConstructionMediaProject, MediaDocument };
+
+// 1. Presigned URL for media uploads (Step A)
+export const getPresignedUrlApi = async (payload: PresignedUrlPayload) => {
+  try {
+    return await axiosInstance.post<PresignedUrlApiResponse>("/common/upload/presigned-url", payload);
+  } catch (err: unknown) {
+    const axiosErr = err as AxiosError;
+    if (axiosErr?.response?.status === 404) {
+      return await axiosInstance.post<PresignedUrlApiResponse>("/upload/presigned-url", payload);
+    }
+    throw err;
+  }
+};
+
+// 2. PUT file to S3 (Step B)
+export const uploadFileToS3Direct = async (
+  uploadUrl: string,
+  file: File,
+  fileType: string,
+  onProgress?: (progress: number) => void
+): Promise<void> => {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", fileType || "application/octet-stream");
+
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          onProgress(percent);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (onProgress) onProgress(100);
+        resolve();
+      } else {
+        reject(new Error(`S3 upload failed with status ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error("Network error during S3 upload."));
+    };
+
+    xhr.send(file);
+  });
+};
+
+// 3. Attach media to lead in Construction panel (Step C)
+export const attachConstructionMediaApi = (leadId: string, payload: AttachMediaPayload) => {
+  return axiosInstance.post<AttachMediaApiResponse>(`/construction/media/${leadId}`, payload);
+};
+
+// Combined 3-step media upload flow
+export const uploadConstructionMediaFlow = async ({
+  file,
+  leadId,
+  onProgress,
+}: {
+  file: File;
+  leadId: string;
+  onProgress?: (progress: number) => void;
+}) => {
+  const isVideo = file.type.startsWith("video/") || /\.(mp4|mov|avi|webm|mkv)$/i.test(file.name);
+  const mediaType: "photo" | "video" = isVideo ? "video" : "photo";
+  const fileType = file.type || (isVideo ? "video/mp4" : "image/jpeg");
+
+  // Step A: Presigned URL
+  const presignedRes = await getPresignedUrlApi({
+    fileName: file.name,
+    fileType,
+    folder: "media",
+  });
+
+  const uploadData = presignedRes.data.data;
+  const uploadUrl = uploadData?.uploadUrl;
+  const fileUrl = uploadData?.fileUrl;
+
+  if (!uploadUrl || !fileUrl) {
+    throw new Error("Failed to obtain upload URL from server.");
+  }
+
+  // Step B: PUT file to S3
+  await uploadFileToS3Direct(uploadUrl, file, fileType, onProgress);
+
+  // Step C: Attach to lead in Construction panel
+  const attachRes = await attachConstructionMediaApi(leadId, {
+    url: fileUrl,
+    name: file.name,
+    type: mediaType,
+  });
+
+  return attachRes.data;
+};
+
+// Construction panel — list all projects + photos & videos
+export const getConstructionMediaApi = (params?: ConstructionMediaQueryParams) => {
+  return axiosInstance.get<ConstructionMediaApiResponse>("/construction/media", { params });
+};
+
+// Get one lead's photos & videos
+export const getConstructionLeadMediaApi = (leadId: string) => {
+  return axiosInstance.get<ConstructionMediaApiResponse>(`/construction/media/${leadId}`);
+};
+
 export const getTasksApi = () => {
   return axiosInstance.get<TasksApiResponse>("/construction/tasks");
 };
 
-export const getDeliveriesApi = () => {
-  return axiosInstance.get<DeliveriesApiResponse>("/construction/deliveries");
+export const getDeliveriesApi = (params?: DeliveriesQueryParams) => {
+  return axiosInstance.get<DeliveriesApiResponse>("/construction/deliveries", { params });
 };
 
-export const getDashboardApi = () => {
-  return axiosInstance.get<DashboardApiResponse>("/construction/dashboard");
+export const getDeliveryFiltersApi = () => {
+  return axiosInstance.get<DeliveryFiltersApiResponse>("/construction/deliveries/filters");
+};
+
+export const exportDeliveriesApi = (params?: DeliveriesQueryParams) => {
+  return axiosInstance.get("/construction/deliveries/export", {
+    params,
+    responseType: "blob",
+  });
+};
+
+export const createDeliveryApi = (payload: CreateDeliveryPayload) => {
+  return axiosInstance.post<CreateDeliveryApiResponse>("/construction/deliveries", payload);
+};
+
+export type { CreateDeliveryPayload, CreateDeliveryApiResponse };
+
+export const getDashboardFiltersApi = () => {
+  return axiosInstance.get<DashboardFiltersApiResponse>("/construction/dashboard/filters");
+};
+
+export const getDashboardApi = (params?: DashboardQueryParams) => {
+  return axiosInstance.get<DashboardApiResponse>("/construction/dashboard", { params });
+};
+
+export const exportDashboardApi = (params?: DashboardQueryParams) => {
+  return axiosInstance.get("/construction/dashboard/export", {
+    params,
+    responseType: "blob",
+  });
 };
 
 export const getDeliveryDetailsApi = (deliveryId: string) => {
@@ -60,16 +262,24 @@ export const downloadDeliveryBillOfLadingApi = (deliveryId: string) => {
 
 export interface CreateTaskPayload {
   title: string;
-  description: string;
+  description?: string;
+  workDescription?: string;
   leadId: string | null;
-  assignedTo: string | null;
-  priority: string;
-  status: string;
-  dueDate: string;
+  assignedTo?: string | null;
+  priority?: string;
+  status?: string;
+  dueDate?: string;
+  startDate?: string;
+  estimatedEndDate?: string;
+  attachments?: string[];
 }
 
 export const createTaskApi = (payload: CreateTaskPayload) => {
   return axiosInstance.post("/construction/tasks", payload);
+};
+
+export const createConstructionTaskApi = (payload: CreateConstructionTaskPayload) => {
+  return axiosInstance.post<ConstructionTaskDetailApiResponse>("/construction/tasks", payload);
 };
 
 export interface CreateWorkLogPayload {
@@ -86,6 +296,12 @@ export const createWorkLogApi = (payload: CreateWorkLogPayload) => {
   return axiosInstance.post("/construction/work-logs", payload);
 };
 
+export const getWorkLogsApi = (params?: GetWorkLogsParams) => {
+  return axiosInstance.get<WorkLogsApiResponse>("/construction/work-logs", {
+    params,
+  });
+};
+
 export const markDeliveryReceivedApi = (deliveryId: string) => {
   return axiosInstance.post(`/construction/deliveries/${deliveryId}/mark-received`);
 };
@@ -96,6 +312,7 @@ export const markDeliveryPartialApi = (deliveryId: string, payload?: { notes?: s
 
 export interface ScanBundlePayload {
   bundleId: string;
+  project?: string;
 }
 
 export const scanBundleApi = (payload: ScanBundlePayload) => {
@@ -110,8 +327,37 @@ export const getLabelsApi = (params?: LabelsQueryParams) => {
   return axiosInstance.get<LabelsApiResponse>("/construction/labels", { params });
 };
 
+export const exportLabelsApi = (params?: LabelsQueryParams) => {
+  return axiosInstance.get("/construction/labels/export", {
+    params,
+    responseType: "blob",
+  });
+};
+
 export const getBundleScansApi = (params?: BundleScanQueryParams) => {
   return axiosInstance.get<BundleScanApiResponse>("/construction/bundle-scan", { params });
+};
+
+export const getBundleScanProjectsApi = (params?: BundleScanProjectsQueryParams) => {
+  return axiosInstance.get<BundleScanProjectsApiResponse>("/construction/bundle-scan/projects", { params });
+};
+
+export const getBundleScanLoadsApi = (leadId: string, params?: BundleScanLoadsQueryParams) => {
+  return axiosInstance.get<BundleScanLoadsApiResponse>(`/construction/bundle-scan/projects/${leadId}/loads`, { params });
+};
+
+export const getBundleScanBundlesApi = (packingListId: string, params?: BundleScanBundlesQueryParams) => {
+  return axiosInstance.get<BundleScanLoadBundlesApiResponse>(
+    `/construction/bundle-scan/loads/${packingListId}/bundles`,
+    { params }
+  );
+};
+
+export const exportBundleScanApi = (params?: BundleScanQueryParams) => {
+  return axiosInstance.get("/construction/bundle-scan/export", {
+    params,
+    responseType: "blob",
+  });
 };
 
 export const getPackingListsApi = (params?: PackingListsQueryParams) => {
@@ -122,8 +368,9 @@ export const getPackingListDetailsApi = (packingListId: string) => {
   return axiosInstance.get<PackingListDetailApiResponse>(`/construction/packing-lists/${packingListId}`);
 };
 
-export const exportPackingListsApi = () => {
+export const exportPackingListsApi = (params?: PackingListsQueryParams) => {
   return axiosInstance.get("/construction/packing-lists/export", {
+    params,
     responseType: "blob",
   });
 };
@@ -150,6 +397,13 @@ export const getDispatchVerificationApi = (params?: DispatchVerificationQueryPar
   return axiosInstance.get<DispatchVerificationApiResponse>("/construction/dispatch-verification", { params });
 };
 
+export const exportDispatchVerificationApi = (params?: DispatchVerificationQueryParams) => {
+  return axiosInstance.get("/construction/dispatch-verification/export", {
+    params,
+    responseType: "blob",
+  });
+};
+
 export const getDispatchVerificationDetailsApi = (loadId: string) => {
   return axiosInstance.get<DispatchVerificationDetailApiResponse>(`/construction/dispatch-verification/${loadId}`);
 };
@@ -164,6 +418,39 @@ export const confirmDispatchApi = (loadId: string) => {
 
 export const getMaterialRequestsApi = (params?: MaterialRequestsQueryParams) => {
   return axiosInstance.get<MaterialRequestsApiResponse>("/construction/material-requests", { params });
+};
+
+export const getMaterialRequestsFiltersApi = () => {
+  return axiosInstance.get<MaterialRequestsFiltersApiResponse>("/construction/material-requests/filters");
+};
+
+export interface ExportMaterialRequestsParams {
+  leadId?: string;
+  projectId?: string;
+  department?: string;
+  status?: string;
+  requestedBy?: string;
+  priority?: string;
+  siteLocation?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  fromDate?: string;
+  toDate?: string;
+  format?: "excel" | "csv";
+}
+
+export const exportMaterialRequestsApi = (params?: ExportMaterialRequestsParams, format: "excel" | "csv" = "excel") => {
+  const url = format === "csv"
+    ? "/construction/material-requests/export/csv"
+    : "/construction/material-requests/export";
+  return axiosInstance.get(url, {
+    params: {
+      ...params,
+      ...(format === "csv" ? { format: "csv" } : {}),
+    },
+    responseType: "blob",
+  });
 };
 
 export const getMaterialRequestDetailsApi = (id: string) => {
@@ -188,6 +475,26 @@ export const createMaterialRequestApi = (payload: CreateMaterialRequestPayload) 
   return axiosInstance.post("/construction/material-requests", payload);
 };
 
+export interface UpdateMaterialRequestStatusPayload {
+  status: string;
+  reviewNotes?: string;
+}
+
+export const updateMaterialRequestStatusApi = (
+  requestId: string,
+  payload: UpdateMaterialRequestStatusPayload
+) => {
+  return axiosInstance.put<{
+    success: boolean;
+    message: string;
+    data?: {
+      materialRequest?: MaterialRequest;
+      [key: string]: unknown;
+    };
+  }>(`/construction/material-requests/${requestId}/status`, payload);
+};
+
+
 export const getBundleDetailsApi = (bundleId: string) => {
   return axiosInstance.get<BundleDetailsApiResponse>(`/construction/bundles/${bundleId}`);
 };
@@ -204,7 +511,24 @@ export const markBundleLoadedApi = (bundleId: string) => {
   return axiosInstance.post(`/construction/bundles/${bundleId}/mark-loaded`);
 };
 
-export const reportBundleMismatchApi = (bundleId: string, payload: { notes: string }) => {
+export interface MismatchItemPayload {
+  itemId: string;
+  partCode?: string;
+  description?: string;
+  qty?: number;
+  receivedQty: number;
+  status?: string;
+}
+
+export interface ReportBundleMismatchPayload {
+  notes?: string;
+  reason?: string;
+  leadId?: string;
+  items?: MismatchItemPayload[];
+  photos?: Array<{ name: string; url: string }>;
+}
+
+export const reportBundleMismatchApi = (bundleId: string, payload: ReportBundleMismatchPayload) => {
   return axiosInstance.post(`/construction/bundles/${bundleId}/report-mismatch`, payload);
 };
 
@@ -226,11 +550,100 @@ export const updateSiteContactApi = (deliveryId: string, payload: UpdateSiteCont
   return axiosInstance.put(`/construction/deliveries/${deliveryId}/site-contact`, payload);
 };
 
+export const getConsolidatedBOMApi = (projectId: string) => {
+  return axiosInstance.get<ConsolidatedBOMApiResponse>(`/construction/projects/${projectId}/consolidated-bom`);
+};
 
+export const getConsolidatedBOMUrlApi = (projectId: string) => {
+  return axiosInstance.get(`/construction/bom/projects/${projectId}/consolidated-url`);
+};
 
+export const getProjectDrawingsApi = (projectId: string) => {
+  return axiosInstance.get<BuildingDrawingsApiResponse>(`/construction/projects/${projectId}/building-drawings`);
+};
 
+export type { BuildingDrawingsApiResponse };
 
+export const getProjectMaterialDeliveriesApi = (leadId: string) => {
+  return axiosInstance.get(`/construction/projects/${leadId}/material-deliveries`);
+};
 
+export const getProjectPhasesApi = (
+  leadId: string,
+  params?: { stepsScope?: string }
+) => {
+  return axiosInstance.get<ConstructionPhasesApiResponse>(
+    `/construction/projects/${leadId}/phases`,
+    { params }
+  );
+};
 
+export const getProjectProgressApi = (leadId: string) => {
+  return axiosInstance.get<ConstructionPhasesApiResponse>(`/construction/projects/${leadId}/progress`);
+};
 
+export const updateProjectStepApi = (
+  leadId: string,
+  stepKey: string,
+  payload: UpdateStepPayload
+) => {
+  return axiosInstance.put<UpdateStepApiResponse>(
+    `/construction/projects/${leadId}/steps/${stepKey}`,
+    payload
+  );
+};
 
+export const addProjectStepAttachmentApi = (
+  leadId: string,
+  stepKey: string,
+  payload: AddStepAttachmentPayload
+) => {
+  return axiosInstance.post<AddStepAttachmentApiResponse>(
+    `/construction/projects/${leadId}/steps/${stepKey}/attachments`,
+    payload
+  );
+};
+
+// Timeline Tasks endpoints (Construction Panel)
+export interface TimelineTasksQueryParams {
+  status?: string;
+  priority?: string;
+  assignedTo?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const getProjectTimelineTasksApi = (
+  leadId: string,
+  params?: TimelineTasksQueryParams
+) => {
+  return axiosInstance.get<TimelineTasksApiResponse>(
+    `/construction/projects/${leadId}/timeline-tasks`,
+    { params }
+  );
+};
+
+export const getConstructionTaskByIdApi = (taskId: string) => {
+  return axiosInstance.get<ConstructionTaskDetailApiResponse>(
+    `/construction/tasks/${taskId}`
+  );
+};
+
+export const completeConstructionTaskApi = (
+  taskId: string,
+  payload?: CompleteTaskPayload
+) => {
+  return axiosInstance.put(
+    `/construction/tasks/${taskId}/complete`,
+    payload || {}
+  );
+};
+
+export const deleteConstructionTaskApi = (taskId: string) => {
+  return axiosInstance.delete(`/construction/tasks/${taskId}`);
+};
+
+export type { ConstructionTimelineTask };

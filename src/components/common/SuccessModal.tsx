@@ -5,6 +5,7 @@ import Modal from "./Modal";
 type SuccessModalProps = {
   open: boolean;
   title: string;
+  description?: string;
   onClose: () => void;
   redirectTo?: string;
 };
@@ -12,6 +13,7 @@ type SuccessModalProps = {
 export default function SuccessModal({
   open,
   title,
+  description,
   onClose,
   redirectTo,
 }: SuccessModalProps) {
@@ -40,6 +42,12 @@ export default function SuccessModal({
       >
         {title}
       </h2>
+
+      {description && (
+        <p className="text-gray-600 text-sm mt-2 max-w-[400px]">
+          {description}
+        </p>
+      )}
 
       <img
         src={successmodalimg}

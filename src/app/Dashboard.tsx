@@ -1,141 +1,376 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getDashboardApi } from "../api/projects.api";
+import dayjs from "dayjs";
+import { toast } from "react-hot-toast";
+import {
+  getDashboardApi,
+  getDashboardFiltersApi,
+  exportDashboardApi,
+} from "../api/projects.api";
+import type { DashboardQueryParams } from "../types/projects.types";
+import { downloadFileFromResponse } from "../lib/downloadUtils";
 import StatsOverview from "../components/cards/StatCard";
 import DashboardDonutChart from "../components/charts/DashboardDonutChart";
 import Timeline from "../components/common/Timeline";
 import RecentActivity from "../components/common/RecentActivity";
 import ExportIcon from "../assets/exportIcon.svg";
 import SuccessModal from "../components/common/SuccessModal";
-import ProjectSelector from "../components/common/ProjectSelector";
-
+import CustomSelect from "../components/common/CustomSelect";
+import DateRangeSelector from "../components/common/DateRangeSelector";
+import {
+  ClockPlus,
+  CalendarPlus,
+  CalendarCheck2,
+  FileText,
+  Truck,
+  Compass,
+  TrendingUp,
+  Loader2,
+} from "lucide-react";
+import {
+  ActiveConstructionSites,
+  UpcomingDeadlines,
+  FreightCarriers,
+} from "../components/dashboard";
+import { formatStatusLabel } from "../utils/dashboard.utils";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const [successOpen, setSuccessOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
+  // Filters state
   const [selectedProject, setSelectedProject] = useState("");
+  const [selectedBuilding, setSelectedBuilding] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
+  const navigate = useNavigate();
+
+  // 1. Fetch dashboard filters
+  const { data: filtersResponse, isLoading: isFiltersLoading } = useQuery({
+    queryKey: ["dashboard-filters"],
+    queryFn: getDashboardFiltersApi,
+  });
+
+  const filterData = filtersResponse?.data?.data;
+  const filterProjects = filterData?.projects || [];
+  const filterBuildings = filterData?.buildings || [];
+  const filterStatuses = filterData?.statuses || [];
+  const filterBusinessUnits = filterData?.businessUnits || [];
+
+  // Options for project dropdown
+  const projectOptions = useMemo(() => {
+    const list = filterProjects.map((p) => ({
+      label: `${p.projectName} (${p.jobId})`,
+      value: p._id,
+    }));
+    return [{ label: "All Projects", value: "" }, ...list];
+  }, [filterProjects]);
+
+  // Options for buildings dropdown (filtered by selected project if any)
+  // const buildingOptions = useMemo(() => {
+  //   const available = selectedProject
+  //     ? filterBuildings.filter((b) => b.leadId === selectedProject)
+  //     : filterBuildings;
+
+  //   const list = available.map((b) => ({
+  //     label: b.name || `Building ${b.buildingNumber}`,
+  //     value: b._id,
+  //   }));
+  //   return [{ label: "All Buildings", value: "" }, ...list];
+  // }, [filterBuildings, selectedProject]);
+
+  // Options for status dropdown
+  const statusOptions = useMemo(() => {
+    const list = filterStatuses.map((st) => ({
+      label: formatStatusLabel(st),
+      value: st,
+    }));
+    return [{ label: "All Statuses", value: "" }, ...list];
+  }, [filterStatuses]);
+
+  // Options for business units dropdown
+  const businessUnitOptions = useMemo(() => {
+    const list = filterBusinessUnits.map((bu) => ({
+      label: bu.label || bu.value,
+      value: bu.value,
+    }));
+    return [{ label: "All Business Units", value: "" }, ...list];
+  }, [filterBusinessUnits]);
+
+  // Check if any filter is active
+  const hasActiveFilters = Boolean(
+    selectedProject ||
+      selectedBuilding ||
+      selectedStatus ||
+      selectedBusinessUnit ||
+      fromDate ||
+      toDate,
+  );
+
+  // Query params for dashboard API
+  const queryParams = useMemo(() => {
+    const params: DashboardQueryParams = {};
+    if (selectedProject) params.projectId = selectedProject;
+    if (selectedBuilding) params.buildingId = selectedBuilding;
+    if (selectedStatus) params.status = selectedStatus;
+    if (selectedBusinessUnit) params.businessUnit = selectedBusinessUnit;
+    if (fromDate) params.fromDate = fromDate;
+    if (toDate) params.toDate = toDate;
+    return params;
+  }, [
+    selectedProject,
+    selectedBuilding,
+    selectedStatus,
+    selectedBusinessUnit,
+    fromDate,
+    toDate,
+  ]);
+
+  // 2. Fetch dashboard data
   const { data: dashboardResponse, isLoading } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: getDashboardApi,
+    queryKey: ["dashboard", queryParams],
+    queryFn: () => getDashboardApi(queryParams),
   });
 
   const dashboardData = dashboardResponse?.data?.data;
   const projectStats = dashboardData?.projectStats;
   const deliveryOverview = dashboardData?.deliveryOverview;
-  const upcomingDeadlinesList = dashboardData?.upcomingDeadlines || [];
-  const recentDeliveriesList = dashboardData?.recentDeliveries || [];
+  const materialOverview = dashboardData?.materialRequestOverview;
+  const activeSitesList = dashboardData?.activeSites || [];
+  const upcomingScheduleList =
+    dashboardData?.upcomingSchedule || dashboardData?.upcomingDeadlines || [];
+  const projectTimelineList = dashboardData?.projectTimelineOverall || [];
+  const freightCarriers = dashboardData?.freightCarriers;
 
+  const handleResetFilters = () => {
+    setSelectedProject("");
+    setSelectedBuilding("");
+    setSelectedStatus("");
+    setSelectedBusinessUnit("");
+    setFromDate("");
+    setToDate("");
+  };
+
+  // KPI cards
   const stats = [
     {
       key: "total",
       title: "Total Projects",
       value: isLoading ? "..." : (projectStats?.total ?? 0),
-      iconBg: "#FEE2E2",
-      iconsvg: (
-        <div className="w-5 h-5 bg-orange-500 rounded text-white flex items-center justify-center text-[10px]">
-          📊
-        </div>
-      ),
-      trend: { value: "15%", label: "by Yesterday", isUp: true },
+      iconBg: "#FA5A16",
+      iconsvg: <ClockPlus size={18} className="text-white" strokeWidth={2.2} />,
+      trend: {
+        value: `${projectStats?.totalChangePctVsYesterday ?? 0}%`,
+        label: "by Yesterday",
+        isUp: (projectStats?.totalChangePctVsYesterday ?? 0) >= 0,
+      },
     },
     {
       key: "ontrack",
       title: "On Track",
       value: isLoading ? "..." : (projectStats?.onTrack ?? 0),
-      iconBg: "#F3F4F6",
-      iconsvg: (
-        <div className="w-5 h-5 bg-gray-900 rounded text-white flex items-center justify-center text-[10px]">
-          ⏱️
-        </div>
-      ),
-      trend: { value: "86.2%", label: "on track", isUp: true },
+      iconBg: "#18181B",
+      iconsvg: <ClockPlus size={18} className="text-white" strokeWidth={2.2} />,
+      trend: {
+        value: `${projectStats?.onTrackPct ?? 0}%`,
+        label: "on track",
+        isUp: true,
+      },
     },
     {
       key: "delayed",
       title: "Delayed",
       value: isLoading ? "..." : (projectStats?.delayed ?? 0),
-      iconBg: "#DBEAFE",
+      iconBg: "#2563EB",
       iconsvg: (
-        <div className="w-5 h-5 bg-blue-500 rounded text-white flex items-center justify-center text-[10px]">
-          📅
-        </div>
+        <CalendarPlus size={18} className="text-white" strokeWidth={2.2} />
       ),
-      trend: { value: "22.2%", label: "delayed", isUp: false },
+      trend: {
+        value: `${projectStats?.delayedPct ?? 0}%`,
+        label: "delayed",
+        isUp: false,
+      },
     },
     {
       key: "completed",
       title: "Completed",
       value: isLoading ? "..." : (projectStats?.completed ?? 0),
-      iconBg: "#FCE7F3",
+      iconBg: "#E91E63",
       iconsvg: (
-        <div className="w-5 h-5 bg-pink-500 rounded text-white flex items-center justify-center text-[10px]">
-          ✅
-        </div>
+        <CalendarCheck2 size={18} className="text-white" strokeWidth={2.2} />
       ),
-      trend: { value: "11.11%", label: "completed", isUp: true },
+      trend: {
+        value: `${projectStats?.completedPct ?? 0}%`,
+        label: "completed",
+        isUp: (projectStats?.completedPct ?? 0) >= 0,
+      },
     },
     {
       key: "rate",
       title: "Completion Rate",
       value: isLoading ? "..." : `${projectStats?.completionRate ?? 0}%`,
-      iconBg: "#FEF3C7",
-      iconsvg: (
-        <div className="w-5 h-5 bg-yellow-500 rounded text-white flex items-center justify-center text-[10px]">
-          📈
-        </div>
-      ),
-      trend: { value: "Average", label: "Completion", isUp: true },
+      iconBg: "#FA5A16",
+      iconsvg: <ClockPlus size={18} className="text-white" strokeWidth={2.2} />,
+      trend: {
+        value: projectStats?.completionRateLabel || "Average Completion",
+        label: "",
+        isUp: true,
+      },
     },
     {
       key: "deadlines",
       title: "Upcoming Deadlines",
       value: isLoading ? "..." : (projectStats?.upcomingDeadlines ?? 0),
-      iconBg: "#FEE2E2",
-      iconsvg: (
-        <div className="w-5 h-5 bg-red-500 rounded text-white flex items-center justify-center text-[10px]">
-          🔔
-        </div>
-      ),
+      iconBg: "#EF4444",
+      iconsvg: <ClockPlus size={18} className="text-white" strokeWidth={2.2} />,
+      valueColor: "text-red-500",
       trend: { value: "Next", label: "30 days", isUp: true },
     },
   ];
 
+  // Delivery Overview Donut
   const deliveryData = [
-    { value: deliveryOverview?.delivered ?? 0, name: "Delivered", color: "#1D51A4" },
-    { value: deliveryOverview?.inTransit ?? 0, name: "In Transit", color: "#F59E0B" },
-    { value: deliveryOverview?.outForDelivery ?? 0, name: "Out for Delivery", color: "#EC4899" },
-    { value: deliveryOverview?.delayed ?? 0, name: "Delayed", color: "#EF4444" },
+    {
+      value: deliveryOverview?.delivered ?? 0,
+      displayValue: `${deliveryOverview?.deliveredPct ?? 0}%`,
+      name: "Delivered",
+      color: "#1D51A4",
+    },
+    {
+      value: deliveryOverview?.inTransit ?? 0,
+      displayValue: `${deliveryOverview?.inTransitPct ?? 0}%`,
+      name: "In Transit",
+      color: "#F59E0B",
+    },
+    {
+      value: deliveryOverview?.outForDelivery ?? 0,
+      displayValue: `${deliveryOverview?.outForDeliveryPct ?? 0}%`,
+      name: "Out for Delivery",
+      color: "#EC4899",
+    },
+    {
+      value: deliveryOverview?.delayed ?? 0,
+      displayValue: `${deliveryOverview?.delayedPct ?? 0}%`,
+      name: "Delayed",
+      color: "#EF4444",
+    },
   ];
 
+  // Material Request Overview Donut
   const materialData = [
-    { value: 0, name: "Approved", color: "#1D51A4" },
-    { value: 0, name: "Pending Approval", color: "#F59E0B" },
-    { value: 0, name: "Rejected", color: "#EC4899" },
-    { value: 0, name: "Urgent Requests", color: "#EF4444" },
+    {
+      value: materialOverview?.approved ?? 0,
+      displayValue: `${materialOverview?.approvedPct ?? 0}%`,
+      name: "Approved",
+      color: "#1D51A4",
+    },
+    {
+      value: materialOverview?.pendingApproval ?? 0,
+      displayValue: `${materialOverview?.pendingApprovalPct ?? 0}%`,
+      name: "Pending Approval",
+      color: "#F59E0B",
+    },
+    {
+      value: materialOverview?.rejected ?? 0,
+      displayValue: `${materialOverview?.rejectedPct ?? 0}%`,
+      name: "Rejected",
+      color: "#EC4899",
+    },
+    {
+      value: materialOverview?.urgent ?? 0,
+      displayValue: `${
+        materialOverview?.total
+          ? Math.round(
+              ((materialOverview.urgent ?? 0) / materialOverview.total) * 1000,
+            ) / 10
+          : 0
+      }%`,
+      name: "Urgent Requests",
+      color: "#EF4444",
+    },
   ];
 
-  const timelineSteps = [
-    { title: "Planning", date: "-", status: "completed" as const },
-    { title: "Design", date: "-", status: "completed" as const },
-    { title: "Procurement", date: "-", status: "completed" as const },
-    { title: "Execution", date: "-", status: "inprogress" as const },
-    { title: "Handover", date: "-", status: "upcoming" as const },
-  ];
+  // Project Timeline (Overall)
+  const timelineSteps = useMemo(() => {
+    if (projectTimelineList.length > 0) {
+      return projectTimelineList.map((step) => ({
+        title: step.label,
+        date: step.date ? dayjs(step.date).format("DD/MM/YYYY") : "-",
+        status: (step.status?.toLowerCase() === "completed"
+          ? "completed"
+          : step.status?.toLowerCase() === "inprogress"
+            ? "inprogress"
+            : "upcoming") as "completed" | "inprogress" | "upcoming",
+      }));
+    }
+    return [
+      { title: "Planning", date: "14/01/2024", status: "completed" as const },
+      { title: "Design", date: "14/01/2024", status: "completed" as const },
+      {
+        title: "Procurement",
+        date: "14/01/2024",
+        status: "completed" as const,
+      },
+      { title: "Execution", date: "14/01/2024", status: "inprogress" as const },
+      { title: "Handover", date: "14/01/2024", status: "upcoming" as const },
+    ];
+  }, [projectTimelineList]);
 
-  const activities = recentDeliveriesList.map((delivery) => ({
-    id: delivery.deliveryId,
-    type: "order",
-    description: delivery.project?.projectName
-      ? `Delivery (${delivery.status.replace("_", " ")}) for ${delivery.project.projectName} [${delivery.project.jobId}]`
-      : `Delivery (${delivery.status.replace("_", " ")}) [${delivery.project?.jobId || "-"}]`,
-    timestamp: new Date(delivery.deliveryDate).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }),
-    iconBg: "#F0FDF4",
-    icon: <div className="text-green-500 text-lg">🚚</div>,
-  }));
+  // Recent Activity (at most 5 activities, directly from API without fallback)
+  const activities = useMemo(() => {
+    const list = dashboardData?.recentActivity || [];
+    return list.slice(0, 5).map((item, idx) => {
+      let iconBg = "#E8F1FD";
+      let icon = (
+        <FileText size={18} className="text-blue-500" strokeWidth={2} />
+      );
+
+      if (item.type === "audit") {
+        iconBg = "#F1EAFA";
+        icon = (
+          <Compass size={18} className="text-purple-500" strokeWidth={2} />
+        );
+      } else if (item.type === "production") {
+        iconBg = "#FFF0E6";
+        icon = (
+          <TrendingUp size={18} className="text-orange-500" strokeWidth={2} />
+        );
+      } else if (item.type === "order" || item.type === "delivery") {
+        iconBg = "#E8F8F0";
+        icon = <Truck size={18} className="text-emerald-500" strokeWidth={2} />;
+      }
+
+      return {
+        id: item.refId || `act-${idx}`,
+        type: item.type,
+        description: item.message,
+        timestamp: item.occurredAt
+          ? dayjs(item.occurredAt).format("hh:mm:ss A")
+          : "-",
+        iconBg,
+        icon,
+      };
+    });
+  }, [dashboardData]);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const res = await exportDashboardApi(queryParams);
+      downloadFileFromResponse(res, "construction-dashboard-report.xlsx");
+      setSuccessOpen(true);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      toast.error(errorMsg || "Failed to export dashboard report");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-8 pb-10">
@@ -150,15 +385,20 @@ export default function Dashboard() {
           </p>
         </div>
         <button
-          onClick={() => setSuccessOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-md shadow-sm transition-colors text-sm flex items-center gap-2"
+          onClick={handleExport}
+          disabled={isExporting}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-md shadow-sm transition-colors text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <img
-            src={ExportIcon}
-            alt=""
-            className="w-4 h-4 brightness-0 invert"
-          />
-          Export Report
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+          ) : (
+            <img
+              src={ExportIcon}
+              alt=""
+              className="w-4 h-4 brightness-0 invert"
+            />
+          )}
+          <span>{isExporting ? "Exporting..." : "Export Report"}</span>
         </button>
       </div>
 
@@ -167,247 +407,162 @@ export default function Dashboard() {
 
       {/* Filters Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:flex xl:flex-nowrap items-center gap-4">
+        {/* Project Filter */}
         <div className="w-full xl:w-auto xl:flex-1 min-w-[200px]">
-          <ProjectSelector
+          <CustomSelect
+            title="All Projects"
+            options={projectOptions}
             value={selectedProject}
-            onChange={(val) => setSelectedProject(val)}
-            showAllOption
+            onChange={(val) => {
+              setSelectedProject(val);
+              if (val && selectedBuilding) {
+                const b = filterBuildings.find(
+                  (item) => item._id === selectedBuilding,
+                );
+                if (b && b.leadId !== val) {
+                  setSelectedBuilding("");
+                }
+              }
+            }}
+            width="100%"
+            searchable
+            loading={isFiltersLoading}
           />
         </div>
 
-        <div className="relative w-full xl:w-auto xl:flex-1 min-w-[180px]">
-          <select className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
-            <option>Buildings : All Buildings</option>
-          </select>
-          <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </div>
+        {/* Building Filter */}
+        {/* <div className="w-full xl:w-auto xl:flex-1 min-w-[180px]">
+          <CustomSelect
+            title="All Buildings"
+            options={buildingOptions}
+            value={selectedBuilding}
+            onChange={(val) => {
+              setSelectedBuilding(val);
+              if (val && !selectedProject) {
+                const b = filterBuildings.find((item) => item._id === val);
+                if (b?.leadId) {
+                  setSelectedProject(b.leadId);
+                }
+              }
+            }}
+            width="100%"
+            searchable
+            loading={isFiltersLoading}
+          />
+        </div> */}
+
+        {/* Status Filter */}
+        <div className="w-full xl:w-auto xl:flex-1 min-w-[180px]">
+          <CustomSelect
+            title="All Statuses"
+            options={statusOptions}
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+            width="100%"
+            searchable
+            loading={isFiltersLoading}
+          />
         </div>
 
-        <div className="relative w-full xl:w-auto xl:flex-1 min-w-[180px]">
-          <select className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
-            <option>Status : All Status</option>
-          </select>
-          <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </div>
+        {/* Business Unit Filter */}
+        <div className="w-full xl:w-auto xl:flex-1 min-w-[180px]">
+          <CustomSelect
+            title="All Business Units"
+            options={businessUnitOptions}
+            value={selectedBusinessUnit}
+            onChange={setSelectedBusinessUnit}
+            width="100%"
+            searchable
+            loading={isFiltersLoading}
+          />
         </div>
 
-        <button className="relative bg-white border border-gray-200 shadow-sm rounded-lg text-xs sm:text-sm font-bold text-gray-700 flex items-center justify-between w-full xl:w-auto xl:flex-1 min-w-[220px] px-4 py-2 hover:bg-gray-50 transition-colors">
-          <span>24 Mar 2025 - 31 Mar 2025</span>
-          <svg
-            className="w-4 h-4 text-gray-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-        </button>
+        {/* Date Range Selector */}
+        <DateRangeSelector
+          fromDate={fromDate}
+          toDate={toDate}
+          onChange={({ fromDate: newFrom, toDate: newTo }) => {
+            setFromDate(newFrom);
+            setToDate(newTo);
+          }}
+        />
 
-        <button className="xl:ml-auto flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 py-2 rounded-lg border border-gray-200 bg-white shadow-sm w-full sm:w-auto justify-center sm:justify-start">
-          Restart
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        {/* Reset / Restart Filter Button (only shown when any filter is active) */}
+        {hasActiveFilters && (
+          <button
+            onClick={handleResetFilters}
+            title="Reset all filters"
+            className="xl:ml-auto flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 py-2 rounded border border-gray-200 bg-white shadow-sm w-full sm:w-auto justify-center sm:justify-start hover:bg-gray-50 h-[40px]"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-        </button>
+            Reset
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Delivery Overview Donut */}
         <DashboardDonutChart
           title="Delivery Overview"
           total={deliveryOverview?.total ?? 0}
           data={deliveryData}
-          subtitle="Today's Deliveries"
+          onViewAll={() => navigate("/delivery-tracking")}
+          subtitle={
+            deliveryOverview?.scope === "today"
+              ? "Today's Deliveries"
+              : "Total Deliveries"
+          }
         />
+
+        {/* Material Request Overview Donut */}
         <DashboardDonutChart
           title="Material Request Overview"
-          total={14}
+          total={materialOverview?.total ?? 0}
           data={materialData}
-          subtitle="Pending Approval"
+          onViewAll={() => navigate("/materials")}
+          subtitle={`${materialOverview?.pendingApproval ?? 0} Pending`}
         />
 
         {/* Active Construction Sites Table */}
-        <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-gray-900">
-              Active Construction Sites
-            </h3>
-            <button className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-md flex items-center gap-1 hover:bg-gray-50 transition-colors">
-              View All
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50/80">
-                <tr className="text-[11px] font-bold text-gray-900 border-b border-gray-100 uppercase tracking-wider">
-                  <th className="py-4 pl-4 pr-2 rounded-tl-lg">Project</th>
-                  <th className="py-4 pr-2">Progress</th>
-                  <th className="py-4 pr-2">Deadline</th>
-                  <th className="py-4 pr-4 rounded-tr-lg">Delivery Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-xs font-medium text-gray-400">
-                    No active construction site data available
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ActiveConstructionSites
+          sites={activeSitesList}
+          isLoading={isLoading}
+        />
       </div>
 
       {/* Bottom Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Deadlines */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-gray-900">
-              Upcoming Project Deadlines
-            </h3>
-            <button className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-md hover:bg-gray-50 transition-colors">
-              View All
-            </button>
-          </div>
-          <div className="space-y-4">
-            {isLoading ? (
-              [1, 2, 3].map((n) => (
-                <div key={n} className="flex justify-between items-center border-b border-gray-50 pb-3 last:border-0 last:pb-0 animate-pulse">
-                  <div className="space-y-2">
-                    <div className="h-4 w-40 bg-gray-200 rounded" />
-                    <div className="h-3 w-24 bg-gray-100 rounded" />
-                  </div>
-                  <div className="space-y-2 flex flex-col items-end">
-                    <div className="h-3.5 w-20 bg-gray-200 rounded" />
-                    <div className="h-2.5 w-14 bg-gray-100 rounded" />
-                  </div>
-                </div>
-              ))
-            ) : upcomingDeadlinesList.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4 text-center">No upcoming deadlines</p>
-            ) : (
-              upcomingDeadlinesList.map((item, i) => (
-                <div
-                  key={item.leadId || i}
-                  className="flex justify-between items-center border-b border-gray-50 pb-3 last:border-0 last:pb-0"
-                >
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">
-                      {item.projectName || "Unnamed Project"}
-                    </p>
-                    <p className="text-[10px] text-orange-500 font-bold">
-                      {item.location || "N/A"} <span className="text-gray-400">• {item.jobId}</span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[11px] font-bold text-red-500">
-                      {new Date(item.endDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
-                    <p className="text-[9px] text-gray-400 font-bold">
-                      {item.daysLeft} Days Left
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        {/* Upcoming Schedule */}
+        <UpcomingDeadlines
+          title="Upcoming Schedule"
+          deadlines={upcomingScheduleList}
+          isLoading={isLoading}
+          onViewAll={() => navigate("/projects")}
+        />
 
+        {/* Project Timeline (Overall) */}
         <Timeline steps={timelineSteps} />
 
         {/* Freight Carriers Table */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-gray-900">
-              Freight Carriers & Deliveries
-            </h3>
-            <button className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-md hover:bg-gray-50 transition-colors">
-              View All
-            </button>
-          </div>
+        <FreightCarriers
+          freightCarriers={freightCarriers}
+          isLoading={isLoading}
+        />
 
-          <div className="flex-1 overflow-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50/80">
-                <tr className="text-[11px] font-bold text-gray-900 border-b border-gray-100 uppercase tracking-wider">
-                  <th className="py-4 pl-4 pr-2 rounded-tl-lg">Carrier</th>
-                  <th className="py-4 pr-2">Loads Today</th>
-                  <th className="py-4 pr-2">On Time</th>
-                  <th className="py-4 pr-2">Delayed</th>
-                  <th className="py-4 pr-4 rounded-tr-lg">Priority</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-xs font-medium text-gray-400">
-                    No carrier delivery data available
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="bg-gray-50 p-2 rounded-lg">
-              <div className="text-[10px] text-orange-500">🚚</div>
-              <p className="text-lg font-bold text-gray-900">-</p>
-              <p className="text-[8px] text-gray-400 font-bold uppercase">
-                Total Loads
-              </p>
-            </div>
-            <div className="bg-gray-50 p-2 rounded-lg">
-              <div className="text-[10px] text-orange-800">📦</div>
-              <p className="text-lg font-bold text-gray-900">-</p>
-              <p className="text-[8px] text-gray-400 font-bold uppercase">
-                On time
-              </p>
-            </div>
-            <div className="bg-gray-50 p-2 rounded-lg">
-              <div className="text-[10px] text-blue-600">⌛</div>
-              <p className="text-lg font-bold text-gray-900">-</p>
-              <p className="text-[8px] text-gray-400 font-bold uppercase">
-                Delayed
-              </p>
-            </div>
-          </div>
-        </div>
-
+        {/* Recent Activity */}
         <RecentActivity activities={activities} />
       </div>
 

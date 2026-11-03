@@ -14,13 +14,6 @@ type IssueReportingModalProps = {
   onSubmit: (data: any) => void;
 };
 
-const assigneeOptions = [
-  { label: "Emily Carter", value: "6a4e5c37b38b0e8f5be3f94e" },
-  { label: "Construction Test User", value: "6a59dfec849c41f88e90f5f8" },
-  { label: "Admin User", value: "6a4e5c37b38b0e8f5be3f94a" },
-  { label: "Unassigned", value: "null" },
-];
-
 const priorityOptions = [
   { label: "Low", value: "low" },
   { label: "Medium", value: "medium" },
@@ -36,7 +29,6 @@ const statusOptions = [
 const createTaskSchema = z.object({
   taskName: z.string().min(1, "Task name is required"),
   selectedProject: z.string().min(1, "Project is required"),
-  assignedTo: z.string().min(1, "Assignee is required"),
   priority: z.string().min(1, "Priority is required"),
   taskStatus: z.string().min(1, "Status is required"),
   deadline: z.string().min(1, "Deadline is required"),
@@ -63,7 +55,6 @@ export default function NewTaskModel({
     defaultValues: {
       taskName: "",
       selectedProject: "",
-      assignedTo: "null",
       priority: "medium",
       taskStatus: "todo",
       deadline: "",
@@ -79,7 +70,7 @@ export default function NewTaskModel({
       onSubmit({
         taskName: variables.title,
         project: variables.leadId,
-        assignedTo: variables.assignedTo,
+        assignedTo: variables.assignedTo || "Unassigned",
         priority: variables.priority,
         status: variables.status === "in_progress" ? "inProgress" : variables.status,
         deadline: variables.dueDate,
@@ -102,7 +93,7 @@ export default function NewTaskModel({
       title: values.taskName,
       description: values.description,
       leadId: values.selectedProject,
-      assignedTo: values.assignedTo === "null" ? null : values.assignedTo,
+      assignedTo: null,
       priority: values.priority,
       status: values.taskStatus === "inProgress" ? "in_progress" : values.taskStatus,
       dueDate: values.deadline,
@@ -168,45 +159,6 @@ export default function NewTaskModel({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-[#111827] inline-block mb-2">
-                Assigned To
-              </label>
-              <Controller
-                name="assignedTo"
-                control={control}
-                render={({ field }) => (
-                  <CustomSelect
-                    title="Select Assignee"
-                    options={assigneeOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    width="100%"
-                    searchable
-                  />
-                )}
-              />
-              {errors.assignedTo && (
-                <p className="text-xs text-red-500 mt-1 font-medium">{errors.assignedTo.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-sm text-[#111827]">Deadline</label>
-              <input
-                type="date"
-                {...register("deadline")}
-                placeholder="dd - mm - yyyy"
-                className={`mt-2 w-full h-[40px] rounded-[8px] border px-4 outline-none text-sm ${errors.deadline ? "border-red-500 focus:border-red-500" : "border-gray-200"
-                  }`}
-              />
-              {errors.deadline && (
-                <p className="text-xs text-red-500 mt-1 font-medium">{errors.deadline.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm text-[#111827] inline-block mb-2">
                 Priority
               </label>
               <Controller
@@ -248,6 +200,20 @@ export default function NewTaskModel({
                 <p className="text-xs text-red-500 mt-1 font-medium">{errors.taskStatus.message}</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="text-sm text-[#111827]">Deadline</label>
+            <input
+              type="date"
+              {...register("deadline")}
+              placeholder="dd - mm - yyyy"
+              className={`mt-2 w-full h-[40px] rounded-[8px] border px-4 outline-none text-sm ${errors.deadline ? "border-red-500 focus:border-red-500" : "border-gray-200"
+                }`}
+            />
+            {errors.deadline && (
+              <p className="text-xs text-red-500 mt-1 font-medium">{errors.deadline.message}</p>
+            )}
           </div>
 
           <div>

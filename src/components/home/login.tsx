@@ -1,20 +1,19 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import toast from "react-hot-toast";
+import * as Sentry from "@sentry/react";
 import bgImage from "../../assets/AuthBackgroundImg.jpg";
 import { useNavigate } from "react-router-dom";
 import Input from "../common/Input";
 import Button from "../common/Button";
-import type { AxiosError } from "axios";
-import { loginWithEmailSchema, type LoginWithEmailInput } from "../../schema/login.schema";
-import { loginWithEmailApi } from "../../api/auth.api";
-import { useAuthStore } from "../../store/authStore";
-import type { AuthResponse } from "../../types/auth.types";
+import { getApiErrorMessage } from "../../lib/api-error";
+import {
+  loginWithEmailSchema,
+  type LoginWithEmailInput,
+} from "../../schema/login.schema";
+import { useLoginMutation } from "../../modules/auth/auth.hooks";
 
 function Login() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
 
   const {
     register,
@@ -30,44 +29,28 @@ function Login() {
     },
   });
 
-  const { mutate: loginMutate, isPending } = useMutation({
-    mutationFn: (payload: LoginWithEmailInput) => loginWithEmailApi(payload),
-    onSuccess: (response) => {
-      const responseData = response.data as AuthResponse;
+  const { mutateAsync: loginMutateAsync, isPending } = useLoginMutation();
 
-      if (!responseData?.success || !responseData?.data) {
-        setError("root", { type: "server", message: responseData?.message || "Failed to log in" });
-        return;
-      }
-
-      const { accessToken, refreshToken, user, role } = responseData.data;
-
-      if (role !== "construction") {
-        setError("root", { type: "server", message: "Access denied. Only construction roles are authorized to sign in." });
-        return;
-      }
-
-      if (accessToken && refreshToken) {
-        setAuth(accessToken, refreshToken, user);
-        toast.success("Logged in successfully!");
-        navigate("/dashboard");
-      } else {
-        setError("root", { type: "server", message: "Invalid response from server. Token is missing." });
-      }
-    },
-    onError: (error: unknown) => {
-      const err = error as AxiosError<{ message?: string }>;
-      const message = err.response?.data?.message || err.message || "Failed to log in";
-      setError("root", { type: "server", message });
-    },
-  });
-
-  const onSubmit = (data: LoginWithEmailInput) => {
+  const onSubmit = async (data: LoginWithEmailInput) => {
     clearErrors("root");
-    loginMutate({
-      email: data.email.trim(),
-      password: data.password.trim(),
-    });
+    try {
+      await loginMutateAsync({
+        email: data.email.trim(),
+        password: data.password.trim(),
+      });
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Failed to log in");
+      setError("root", { type: "server", message });
+      Sentry.captureMessage("Failed sign-in attempt", {
+        level: "warning",
+        extra: {
+          statusCode: 200,
+          authProvider: "local",
+          email: data.email,
+          responseMessage: message,
+        },
+      });
+    }
   };
 
   return (

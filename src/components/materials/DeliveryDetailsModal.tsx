@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Truck, Package, MapPin, Calendar, Phone, Check, ArrowRight, Download, Warehouse, Loader2 } from "lucide-react";
+import { X, Truck, Package, MapPin, Calendar, Phone, Check, ArrowRight, Download, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getDeliveryDetailsApi, downloadDeliveryPackingListApi, downloadDeliveryBillOfLadingApi } from "../../api/projects.api";
 import Modal from "../common/Modal";
@@ -20,21 +20,6 @@ const formatDateTime = (dateStr?: string | null, timeStr?: string | null) => {
   } catch {
     return dateStr;
   }
-};
-
-const mapStatusToProgressIndex = (status?: string): number => {
-  if (!status) return 0;
-  const normalized = status.toLowerCase();
-  if (normalized === "scheduled") return 0;
-  if (normalized === "bidding_sent" || normalized === "carrier_selected" || normalized === "confirmed") return 1;
-  if (normalized === "loaded") return 2;
-  if (normalized === "picked_up") return 3;
-  if (normalized === "in_transit") return 4;
-  if (normalized === "arrived" || normalized === "arrived_at_plant") return 5;
-  if (normalized === "staged") return 6;
-  if (normalized === "dispatched" || normalized === "ready") return 7;
-  if (normalized === "delivered" || normalized === "received") return 8;
-  return 4; // default to step 4 if unknown
 };
 
 export default function DeliveryDetailsModal({ open, onClose, deliveryId }: DeliveryDetailsModalProps) {
@@ -84,34 +69,37 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
 
   const delivery = detailData?.data?.data?.delivery;
 
-  const currentStatusIndex = mapStatusToProgressIndex(delivery?.status);
+  const statusHistory = delivery?.statusHistory || [];
+  const activeStatus = delivery?.status || (statusHistory.length > 0 ? statusHistory[statusHistory.length - 1]?.status : null);
 
-  const steps = [
-    { label: "Scheduled" },
-    { label: "Material Prepared" },
-    { label: "Loaded" },
-    { label: "Picked Up" },
-    { label: "In Transit" },
-    { label: "Arrived at Plant" },
-    { label: "Staged" },
-    { label: "Dispatched to Site" },
-    { label: "Delivered" },
-  ].map((step, idx) => {
-    let status: "completed" | "current" | "pending" = "pending";
-    if (idx < currentStatusIndex) status = "completed";
-    else if (idx === currentStatusIndex) status = "current";
-    return { ...step, status };
-  });
+  const steps = statusHistory.length > 0
+    ? statusHistory.map((item, idx) => {
+        const isCurrent = idx === statusHistory.length - 1;
+        return {
+          label: item.status ? item.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "-",
+          status: isCurrent ? ("current" as const) : ("completed" as const),
+          timestamp: item.changedAt,
+        };
+      })
+    : activeStatus
+      ? [
+          {
+            label: activeStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            status: "current" as const,
+            timestamp: undefined,
+          },
+        ]
+      : [];
 
-  const formattedStatusText = delivery?.status
-    ? delivery.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-    : "In Transit to Plant";
+  const formattedStatusText = activeStatus
+    ? activeStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : "-";
 
   const etaText = delivery?.schedule?.deliveryTime
     ? `ETA ${delivery.schedule.deliveryTime}`
     : delivery?.schedule?.timings
       ? delivery.schedule.timings
-      : "ETA 10:45 AM";
+      : null;
 
   const formattedWeight = delivery?.loadWeight
     ? `${Number(delivery.loadWeight).toLocaleString()} lbs`
@@ -140,7 +128,7 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                 )}
               </div>
               <p className="text-sm font-semibold text-gray-400">
-                {delivery?.deliveryNumber || deliveryId || "DEL-2001"}
+                {delivery?.deliveryNumber || deliveryId || "-"}
               </p>
             </div>
           </div>
@@ -173,45 +161,51 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <p className="text-xs font-semibold text-[#3F69B0]">Current Status</p>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 bg-[#FFC107] rounded-full" />
-                      <p className="text-[10px] font-bold text-[#3F69B0] uppercase">{etaText}</p>
-                    </div>
+                    {etaText && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 bg-[#FFC107] rounded-full" />
+                        <p className="text-[10px] font-bold text-[#3F69B0] uppercase">{etaText}</p>
+                      </div>
+                    )}
                   </div>
                   <h3 className="text-xl font-bold text-[#3F69B0]">{formattedStatusText}</h3>
                 </div>
                 <div className="text-right">
                   <p className="text-[11px] font-semibold text-gray-400">Staging Area</p>
                   <h4 className="text-lg font-bold text-gray-900">
-                    {delivery?.stagingArea || "Yard-A"}
+                    {delivery?.stagingArea || "-"}
                   </h4>
                 </div>
               </div>
 
               {/* Progress Tracker */}
-              <div className="border border-[#3F69B0]/20 rounded-[15px] p-4 mb-5 bg-gray-50/30">
-                <div className="grid grid-cols-5 gap-y-3">
-                  {steps.map((step, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                      <div className="flex-shrink-0">
-                        {step.status === "completed" ? (
-                          <Check className="w-3 h-3 text-gray-900 stroke-[4]" />
-                        ) : step.status === "current" ? (
-                          <div className="w-3 h-3 bg-[#FFC107] rounded-full border border-white shadow-sm" />
-                        ) : (
-                          <div className="w-3 h-3 border border-[#3F69B0] rounded-full" />
-                        )}
+              {steps.length > 0 && (
+                <div className="border border-[#3F69B0]/20 rounded-[15px] p-4 mb-5 bg-gray-50/30">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                    {steps.map((step, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className="flex-shrink-0">
+                          {step.status === "completed" ? (
+                            <Check className="w-3.5 h-3.5 text-green-600 stroke-[3]" />
+                          ) : (
+                            <div className="w-3.5 h-3.5 bg-[#FFC107] rounded-full border-2 border-white shadow-sm ring-2 ring-[#FFC107]/40" />
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[12px] font-bold text-[#3F69B0]">
+                            {step.label}
+                          </span>
+                          {step.timestamp && (
+                            <span className="text-[9px] font-semibold text-gray-400">
+                              {formatDateTime(step.timestamp)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span
-                        className={`text-[12px] font-bold ${step.status === "pending" ? "text-[#3F69B0]/60" : "text-[#3F69B0]"
-                          }`}
-                      >
-                        {step.label}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Delivery Flow */}
               <div className="bg-[#F0F9FF] border border-[#BEE3F8]/50 rounded-[15px] p-4 mb-6">
@@ -223,12 +217,12 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                     </div>
                     <div>
                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Origin</p>
-                      <p className="text-sm font-bold text-gray-900 leading-none truncate max-w-[180px]" title={delivery?.pickupLocation || "FastFreight"}>
-                        {delivery?.pickupLocation ? delivery.pickupLocation.split(",")[0] : "FastFreight"}
+                      <p className="text-sm font-bold text-gray-900 leading-none truncate max-w-[180px]" title={delivery?.pickupLocation || "-"}>
+                        {delivery?.pickupLocation ? delivery.pickupLocation.split(",")[0] : "-"}
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
+                  {/* <ArrowRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-[#22C55E] rounded-full flex items-center justify-center text-white flex-shrink-0">
                       <Warehouse className="w-5 h-5" />
@@ -236,10 +230,10 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                     <div>
                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Plant</p>
                       <p className="text-sm font-bold text-gray-900 leading-none">
-                        {delivery?.stagingArea || "Yard-A"}
+                        {delivery?.stagingArea || "-"}
                       </p>
                     </div>
-                  </div>
+                  </div> */}
                   <ArrowRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-[#F97316] rounded-full flex items-center justify-center text-white flex-shrink-0">
@@ -247,8 +241,8 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                     </div>
                     <div>
                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Destination</p>
-                      <p className="text-sm font-bold text-gray-900 leading-none truncate max-w-[180px]" title={delivery?.deliveryLocation || delivery?.project?.projectName || "Site A"}>
-                        {delivery?.deliveryLocation ? delivery.deliveryLocation.split(",")[0] : delivery?.project?.projectName || "Site A"}
+                      <p className="text-sm font-bold text-gray-900 leading-none truncate max-w-[180px]" title={delivery?.deliveryLocation || delivery?.project?.projectName || "-"}>
+                        {delivery?.deliveryLocation ? delivery.deliveryLocation.split(",")[0] : delivery?.project?.projectName || "-"}
                       </p>
                     </div>
                   </div>
@@ -264,13 +258,13 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                     <DetailItem
                       icon={<Package />}
                       label="Material"
-                      value={delivery?.materialType || delivery?.description || "Primary Frame Steel"}
+                      value={delivery?.materialType || delivery?.description || "-"}
                       color="bg-purple-50 text-purple-600"
                     />
                     <DetailItem
                       icon={<MapPin />}
                       label="Project"
-                      value={delivery?.project?.projectName || delivery?.project?.jobId || "Logistics Warehouse"}
+                      value={delivery?.project?.projectName || delivery?.project?.jobId || "-"}
                       color="bg-blue-50 text-blue-600"
                     />
                     <DetailItem
@@ -308,19 +302,19 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                     <DetailItem
                       icon={<Truck />}
                       label="Carrier"
-                      value={delivery?.carrier?.email || delivery?.carrier?.phone || "FastFreight"}
+                      value={delivery?.carrier?.email || delivery?.carrier?.phone || "-"}
                       color="bg-blue-50 text-blue-600"
                     />
                     <DetailItem
                       icon={<Truck />}
-                      label={delivery?.carrier?.driverName ? `Driver: ${delivery.carrier.driverName}` : `POC: ${delivery?.receivingPoc || "Vikas"}`}
+                      label={delivery?.carrier?.driverName ? `Driver: ${delivery.carrier.driverName}` : `POC: ${delivery?.receivingPoc || "-"}`}
                       value=""
                       color="bg-blue-50 text-blue-600"
                       hideLabel
                     />
                     <DetailItem
                       icon={<Phone />}
-                      label={`Ph: ${delivery?.carrier?.driverPhone || delivery?.carrier?.phone || delivery?.pickupContactPhone || "+1 555-812"}`}
+                      label={`Ph: ${delivery?.carrier?.driverPhone || delivery?.carrier?.phone || delivery?.pickupContactPhone || "-"}`}
                       value=""
                       color="bg-blue-50 text-blue-600"
                       hideLabel
@@ -335,10 +329,10 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                   <h5 className="text-sm font-bold text-gray-900 mb-3 tracking-tight">Material Info</h5>
                   <div className="bg-[#F0FDF4] border border-[#DCFCE7] rounded-[12px] p-3">
                     <p className="text-xs font-bold text-gray-700">
-                      {formattedWeight} • {delivery?.materialType || "Structural Steel"}
+                      {formattedWeight}{delivery?.materialType ? ` • ${delivery.materialType}` : ""}
                     </p>
                     <p className="text-[10px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider leading-tight">
-                      {delivery?.packageCount ? `${delivery.packageCount} Packages` : "Bundled Components"}
+                      {delivery?.packageCount ? `${delivery.packageCount} Packages` : "-"}
                       {delivery?.loadingEquipment?.length ? ` • Equipment: ${delivery.loadingEquipment.join(", ")}` : ""}
                     </p>
                   </div>
@@ -369,7 +363,7 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                 <h5 className="text-sm font-bold text-gray-900 mb-3 tracking-tight">Special Instructions</h5>
                 <div className="bg-[#FEFCE8] border border-[#FEF08A] rounded-[12px] p-3">
                   <p className="text-xs font-bold text-gray-700 italic tracking-tight">
-                    {delivery?.notes || (delivery?.loadingEquipment?.length ? `Loading equipment required: ${delivery.loadingEquipment.join(", ")}` : "Requires forklift for unloading")}
+                    {delivery?.notes || (delivery?.loadingEquipment?.length ? `Loading equipment required: ${delivery.loadingEquipment.join(", ")}` : "No special instructions")}
                   </p>
                 </div>
               </div>
@@ -412,7 +406,7 @@ function DetailItem({
   return (
     <div className="flex items-start gap-4">
       <div className={`w-10 h-10 ${color} rounded-[10px] flex items-center justify-center flex-shrink-0`}>
-        {React.cloneElement(icon as React.ReactElement<any>, { className: "w-5 h-5" })}
+        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-5 h-5" })}
       </div>
       <div className="overflow-hidden">
         {hideLabel ? (

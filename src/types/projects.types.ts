@@ -13,8 +13,10 @@ export interface Project {
   lifecycleStatus: string;
   jobId: string;
   projectName: string;
+  priority?: string;
   endDate: string | null;
   plannedStartDate?: string | null;
+  createdAt?: string;
   leadId?: string;
 }
 
@@ -23,6 +25,8 @@ export interface ProjectsResponseData {
   total: number;
   page: number;
   limit: number;
+  scope?: string;
+  stages?: string[];
 }
 
 export interface ProjectsApiResponse {
@@ -37,19 +41,30 @@ export interface Delivery {
   status: string;
   description: string;
   deliveryDate: string;
+  materialType?: string;
+  loadWeight?: number;
+  vendor?: string;
+  carrier?: string;
+  pocName?: string;
+  pocPhone?: string;
+  pocEmail?: string;
 }
 
 export interface Task {
   _id: string;
   title: string;
-  assignedTo: string;
+  assignedTo: string | { name?: string; email?: string } | null;
   priority: string;
   status: string;
   dueDate: string;
 }
 
 export interface ProjectDetails {
-  project: Project & { numberOfBuildings?: number };
+  project: Project & {
+    numberOfBuildings?: number;
+    priority?: string;
+    description?: string;
+  };
   deliveries: Delivery[];
   tasks: Task[];
 }
@@ -117,6 +132,79 @@ export interface DrawingsApiResponse {
   data: DrawingsResponseData;
 }
 
+export interface PresignedUrlPayload {
+  fileName: string;
+  fileType: string;
+  folder: string;
+}
+
+export interface PresignedUrlResponseData {
+  uploadUrl: string;
+  fileUrl: string;
+  key: string;
+}
+
+export interface PresignedUrlApiResponse {
+  success: boolean;
+  message?: string;
+  data: PresignedUrlResponseData;
+}
+
+export interface MediaDocument {
+  _id: string;
+  url: string;
+  name: string;
+  type: "photo" | "video" | string;
+  uploadedBy?: string;
+  uploadedAt?: string;
+  approvalStatus?: string;
+  size?: string;
+}
+
+export interface AttachMediaPayload {
+  url: string;
+  name: string;
+  type: "photo" | "video";
+}
+
+export interface AttachMediaApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    document: MediaDocument;
+  };
+}
+
+export interface ConstructionMediaQueryParams {
+  type?: "photo" | "video";
+  leadId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ConstructionMediaProject {
+  leadId: string;
+  projectId: string;
+  projectName: string;
+  location?: string | Record<string, unknown> | null;
+  lastUpdate?: string;
+  documents?: MediaDocument[];
+  photos?: MediaDocument[];
+  videos?: MediaDocument[];
+  photoCount?: number;
+  videoCount?: number;
+}
+
+export interface ConstructionMediaApiResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    projects: ConstructionMediaProject[];
+    total: number;
+  };
+}
+
 export interface AssignedToUser {
   _id: string;
   name: string;
@@ -180,24 +268,42 @@ export interface DeliverySchedule {
 }
 
 export interface DeliveryCarrier {
-  phone: string;
-  email: string;
-  truckNumber: string;
-  driverName: string;
-  driverPhone: string;
+  phone?: string;
+  email?: string;
+  truckNumber?: string;
+  driverName?: string;
+  driverPhone?: string;
 }
 
 export interface DeliveryProject {
-  leadId: string;
-  projectName: string;
-  jobId: string;
-  location: string;
+  leadId?: string;
+  projectName?: string;
+  jobId?: string;
+  location?: string;
+}
+
+export interface DeliverySiteContact {
+  contactName?: string;
+  contactTitle?: string;
+  phone?: string;
+  email?: string;
+  availableHours?: string;
+  notes?: string;
+}
+
+export interface DeliveryStatusHistoryItem {
+  _id?: string;
+  status: string;
+  changedAt: string;
+  changedBy?: string | null;
+  description?: string;
 }
 
 export interface ConstructionDelivery {
   deliveryId: string;
   deliveryNumber: string;
   status: string;
+  statusHistory?: DeliveryStatusHistoryItem[];
   description: string;
   materialType: string;
   loadWeight: number;
@@ -210,8 +316,9 @@ export interface ConstructionDelivery {
   notes: string;
   receivingPoc: string;
   pickupContactPhone: string;
+  siteContact?: DeliverySiteContact | null;
   carrier: DeliveryCarrier | null;
-  project: DeliveryProject;
+  project?: DeliveryProject | null;
 }
 
 export interface DeliveriesStats {
@@ -221,10 +328,62 @@ export interface DeliveriesStats {
   totalToday: number;
 }
 
+export interface DeliveriesQueryParams {
+  page?: number;
+  limit?: number;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "DeliveryDate" | string;
+  search?: string;
+  status?: string;
+  deliveryStatus?: string;
+  leadId?: string;
+  projectId?: string;
+  materialType?: string;
+  siteDestination?: string;
+  transporter?: string;
+  driver?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface DeliveryFiltersData {
+  deliveryStatuses?: string[];
+  siteDestinations?: string[];
+  transporters?: string[];
+  drivers?: string[];
+  materialTypes?: string[];
+  sortBy?: string[];
+  relatedEnums?: {
+    labelSortBy?: string[];
+    labelStatus?: string[];
+    bundleStatus?: string[];
+    bundleScanSortBy?: string[];
+    bundleScanStatus?: string[];
+    packingListSortBy?: string[];
+    packingListStatus?: string[];
+    dispatchSortBy?: string[];
+    dispatchStatus?: string[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface DeliveryFiltersApiResponse {
+  success: boolean;
+  message: string;
+  data: DeliveryFiltersData;
+}
+
 export interface DeliveriesResponseData {
   deliveries: ConstructionDelivery[];
   total: number;
   stats: DeliveriesStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    deliveryStatuses?: string[];
+    [key: string]: unknown;
+  };
 }
 
 export interface DeliveriesApiResponse {
@@ -234,7 +393,7 @@ export interface DeliveriesApiResponse {
 }
 
 export interface BundleProject {
-  leadId: string;
+  leadId?: string;
   projectName: string;
   jobId: string;
 }
@@ -248,7 +407,10 @@ export interface BundleLabel {
   totalWeight: number;
   maxLengthFeet: number;
   status: string;
+  labelPrinted?: boolean;
   packingListId: string;
+  loadId?: string;
+  loadLabel?: string;
   project: BundleProject;
 }
 
@@ -263,6 +425,13 @@ export interface LabelsResponseData {
   bundles: BundleLabel[];
   total: number;
   stats: LabelStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    labelStatus?: string[];
+    bundleStatus?: string[];
+  };
 }
 
 export interface LabelsApiResponse {
@@ -275,7 +444,7 @@ export interface LabelsQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "BundleNo" | string;
   status?: string;
 }
 
@@ -305,6 +474,12 @@ export interface BundleScanResponseData {
   bundles: ScannedBundle[];
   total: number;
   stats: BundleScanStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    status?: string[];
+  };
 }
 
 export interface BundleScanApiResponse {
@@ -317,8 +492,164 @@ export interface BundleScanQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | string;
+  status?: "pending" | "staged" | "on_truck" | "loaded" | "all" | string;
+}
+
+export interface BundleScanProjectsQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
   status?: string;
+  businessUnit?: string;
+  projectId?: string;
+}
+
+export interface BundleScanProjectListItem {
+  leadId: string;
+  projectId: string;
+  jobId: string;
+  projectName: string;
+  location: string;
+  lifecycleStatus: string;
+  totalLoads: number;
+  totalBundles: number;
+  labelsPending: number;
+  lastLoadUpdate: string | null;
+  packingListPlanId: string | null;
+  packingListPlanStatus: string | null;
+}
+
+export interface BundleScanProjectsApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    projects: BundleScanProjectListItem[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface BundleScanProjectSummary {
+  leadId: string;
+  projectId: string;
+  jobId: string;
+  projectName: string;
+  location: string;
+  lifecycleStatus: string;
+}
+
+export interface BundleScanLoadItem {
+  packingListId: string;
+  packingListNo: string;
+  truckLabel: string;
+  truckType?: string;
+  status: string;
+  totalBundles: number;
+  totalWeight: number;
+  maxLengthFeet: number;
+  mismatchCount?: number;
+  hasMismatch?: boolean;
+  updatedAt: string;
+}
+
+export interface BundleScanLoadsStatusCount {
+  status: string;
+  count: number;
+}
+
+export interface BundleScanLoadsStats {
+  totalLoads: number;
+  byStatus?: BundleScanLoadsStatusCount[];
+  draft?: number;
+  confirmed?: number;
+  ready?: number;
+  loading?: number;
+  deliveryCreated?: number;
+  dispatched?: number;
+  delivered?: number;
+  withMismatch?: number;
+}
+
+export interface BundleScanLoadsFilters {
+  statuses: string[];
+  sortBy: string[];
+}
+
+export interface BundleScanLoadsApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    project: BundleScanProjectSummary;
+    loads: BundleScanLoadItem[];
+    total: number;
+    page: number;
+    limit: number;
+    stats?: BundleScanLoadsStats;
+    filters?: BundleScanLoadsFilters;
+  };
+}
+
+export interface BundleScanLoadsQueryParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  sortBy?: "updatedAt" | "packingListNo" | "status" | "totalBundles" | "totalWeight" | string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface BundleScanBundleItem {
+  bundleId: string;
+  bundleNo: string;
+  bundleType: string;
+  title: string;
+  totalWeight: number;
+  maxLengthFeet: number;
+  status: string;
+  labelPrinted: boolean;
+  labelPrintedAt: string | null;
+  verified: boolean;
+  hasMismatch?: boolean;
+  mismatchNotes?: string | null;
+  mismatchReportedAt?: string | null;
+  mismatchItemCount?: number;
+  updatedAt: string;
+}
+
+export interface BundleScanLoadBundlesStats {
+  total: number;
+  withMismatch: number;
+  verified: number;
+  labelPending: number;
+}
+
+export interface BundleScanLoadSummary {
+  packingListId: string;
+  packingListNo: string;
+  truckLabel: string;
+  status: string;
+  totalBundles: number;
+  totalWeight: number;
+}
+
+export interface BundleScanLoadBundlesApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    project: BundleScanProjectSummary;
+    load: BundleScanLoadSummary;
+    bundles: BundleScanBundleItem[];
+    total: number;
+    stats?: BundleScanLoadBundlesStats;
+  };
+}
+
+export interface BundleScanBundlesQueryParams {
+  status?: string;
+  mismatch?: boolean | string | number;
+  labelPending?: boolean | string | number;
 }
 
 export interface PackingListProject {
@@ -403,6 +734,12 @@ export interface PackingListResponseData {
   packingLists: PackingListItem[];
   total: number;
   stats: PackingListStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    status?: string[];
+  };
 }
 
 export interface PackingListApiResponse {
@@ -415,8 +752,9 @@ export interface PackingListsQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "PackingListNo" | string;
   status?: string;
+  leadId?: string;
 }
 
 export interface DispatchLoadProject {
@@ -427,6 +765,7 @@ export interface DispatchLoadProject {
 
 export interface DispatchLoad {
   loadId: string;
+  _id?: string;
   packingListNo: string;
   truck: string;
   totalBundles: number;
@@ -434,6 +773,8 @@ export interface DispatchLoad {
   totalWeight: number;
   destination: string;
   status: string;
+  weightVerified?: boolean;
+  loadingVerified?: boolean;
   project: DispatchLoadProject;
 }
 
@@ -448,6 +789,12 @@ export interface DispatchVerificationResponseData {
   loads: DispatchLoad[];
   total: number;
   stats: DispatchVerificationStats;
+  page?: number;
+  limit?: number;
+  enums?: {
+    sortBy?: string[];
+    status?: string[];
+  };
 }
 
 export interface DispatchVerificationApiResponse {
@@ -466,6 +813,7 @@ export interface DispatchVerificationBundle {
 
 export interface DispatchVerificationDetail {
   loadId: string;
+  _id?: string;
   packingListNo: string;
   truck: string;
   destination: string;
@@ -489,8 +837,9 @@ export interface DispatchVerificationQueryParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
-  status?: string;
+  sortBy?: "Latest" | "Oldest" | "Weight" | "PackingListNo" | string;
+  status?: "pending" | "verified" | "dispatched" | "all" | string;
+  leadId?: string;
 }
 
 export interface DeliveryDetailsResponseData {
@@ -516,10 +865,12 @@ export interface MaterialRequestUser {
 }
 
 export interface RequestedItem {
+  _id?: string;
   name: string;
   quantity: number;
   unit: string;
   notes?: string;
+  deliveryStatus?: string;
 }
 
 export interface MaterialRequest {
@@ -536,6 +887,9 @@ export interface MaterialRequest {
   priority: string;
   status: string;
   totalAmount: number;
+  reviewNotes?: string;
+  notes?: string;
+  remarks?: string;
 }
 
 export interface MaterialRequestStats {
@@ -557,13 +911,42 @@ export interface MaterialRequestsApiResponse {
   data: MaterialRequestsResponseData;
 }
 
+export interface MaterialRequestFilterProject {
+  leadId: string;
+  projectName: string;
+  jobId: string;
+}
+
+export interface MaterialRequestsFiltersData {
+  statuses: string[];
+  priorities: string[];
+  departments: string[];
+  siteLocations: string[];
+  projects: MaterialRequestFilterProject[];
+}
+
+export interface MaterialRequestsFiltersApiResponse {
+  success: boolean;
+  message: string;
+  data: MaterialRequestsFiltersData;
+}
+
 export interface MaterialRequestsQueryParams {
   page?: number;
   limit?: number;
-  project?: string;
+  leadId?: string;
+  projectId?: string;
   department?: string;
   status?: string;
   requestedBy?: string;
+  priority?: string;
+  siteLocation?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  fromDate?: string;
+  toDate?: string;
+  project?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -588,6 +971,23 @@ export interface BundleItem {
   _id: string;
 }
 
+export const MISMATCH_ITEM_STATUSES = {
+  RECEIVED: "Received",
+  PARTIALLY_RECEIVED: "Partially Received",
+  NOT_RECEIVED: "Not Received",
+} as const;
+
+export type MismatchStatus = (typeof MISMATCH_ITEM_STATUSES)[keyof typeof MISMATCH_ITEM_STATUSES];
+
+export interface BundleMismatchItem {
+  itemId: string;
+  partCode: string;
+  description: string;
+  qty: number;
+  receivedQty: number;
+  status: MismatchStatus | string;
+}
+
 export interface BundleDetailInfo {
   bundleId: string;
   bundleNo: string;
@@ -599,8 +999,13 @@ export interface BundleDetailInfo {
   maxLengthFeet: number;
   status: string;
   labelPrinted: boolean;
+  labelPrintedAt?: string | null;
   verified: boolean;
-  mismatchNotes: string;
+  hasMismatch?: boolean;
+  mismatchNotes?: string | null;
+  mismatchReportedAt?: string | null;
+  mismatchItemCount?: number;
+  mismatchItems?: BundleMismatchItem[];
   project: {
     leadId: string;
     projectName: string;
@@ -609,8 +1014,8 @@ export interface BundleDetailInfo {
   packingList: {
     _id: string;
     packingListNo: string;
-    truckType: string;
-    truckLabel: string;
+    truckType?: string;
+    truckLabel?: string;
   };
 }
 
@@ -622,21 +1027,98 @@ export interface BundleDetailsApiResponse {
   };
 }
 
+export interface DashboardFilterProject {
+  _id: string;
+  projectName: string;
+  jobId: string;
+  lifecycleStatus: string;
+  location: string;
+}
+
+export interface DashboardFilterBuilding {
+  _id: string;
+  leadId: string;
+  buildingNumber: number;
+  name: string;
+  status: string;
+}
+export interface DashboardFilterBusinessUnit {
+  value: string;
+  label: string;
+}
+
+export interface DashboardFiltersData {
+  projects: DashboardFilterProject[];
+  buildings: DashboardFilterBuilding[];
+  statuses: string[];
+  businessUnits?: DashboardFilterBusinessUnit[];
+}
+
+export interface DashboardFiltersApiResponse {
+  success: boolean;
+  message: string;
+  data: DashboardFiltersData;
+}
+
+export interface DashboardQueryParams {
+  projectId?: string;
+  leadId?: string;
+  buildingId?: string;
+  status?: string;
+  lifecycleStatus?: string;
+  businessUnit?: string;
+  fromDate?: string;
+  dateFrom?: string;
+  toDate?: string;
+  dateTo?: string;
+}
+
+export interface DashboardFiltersApplied {
+  projectId: string | null;
+  buildingId: string | null;
+  status: string | null;
+  fromDate: string | null;
+  toDate: string | null;
+}
+
 export interface DashboardProjectStats {
   total: number;
   onTrack: number;
   delayed: number;
   completed: number;
+  onTrackPct?: number;
+  delayedPct?: number;
+  completedPct?: number;
   completionRate: number;
   upcomingDeadlines: number;
+  totalChangePctVsYesterday?: number;
+  completionRateLabel?: string;
 }
 
 export interface DashboardDeliveryOverview {
+  scope?: string;
+  fromDate?: string;
+  toDate?: string;
   delivered: number;
   inTransit: number;
   outForDelivery: number;
   delayed: number;
   total: number;
+  deliveredPct?: number;
+  inTransitPct?: number;
+  outForDeliveryPct?: number;
+  delayedPct?: number;
+}
+
+export interface DashboardMaterialRequestOverview {
+  pendingApproval: number;
+  approved: number;
+  rejected: number;
+  urgent: number;
+  total: number;
+  approvedPct?: number;
+  pendingApprovalPct?: number;
+  rejectedPct?: number;
 }
 
 export interface DashboardTaskOverview {
@@ -647,13 +1129,66 @@ export interface DashboardTaskOverview {
   overdue: number;
 }
 
+export interface DashboardActiveSite {
+  leadId: string;
+  projectName: string;
+  jobId: string;
+  site: string;
+  buildingType: string;
+  numberOfBuildings: number;
+  progressPct: number;
+  deadline: string | null;
+  deliveryStatus: string;
+  lifecycleStatus: string;
+}
+
 export interface DashboardUpcomingDeadline {
   leadId: string;
   projectName: string;
   jobId: string;
-  location: string;
+  location?: string;
+  site?: string;
   endDate: string;
   daysLeft: number;
+}
+
+export interface DashboardTimelineItem {
+  key: string;
+  label: string;
+  date: string | null;
+  status: string;
+}
+
+export interface DashboardFreightCarrierRow {
+  carrierId: string;
+  carrierName: string;
+  loadsToday: number;
+  onTime: number;
+  delayed: number;
+  priority: string;
+}
+
+export interface DashboardFreightCarriersTotals {
+  totalLoadsToday: number;
+  onTime: number;
+  onTimePct: number;
+  delayed: number;
+  delayedPct: number;
+}
+
+export interface DashboardFreightCarriers {
+  rows: DashboardFreightCarrierRow[];
+  totals: DashboardFreightCarriersTotals;
+}
+
+export interface DashboardRecentActivityItem {
+  type: string; // 'shipper_file' | 'audit' | 'production'
+  action: string;
+  message: string;
+  occurredAt: string;
+  leadId: string | null;
+  actorName: string | null;
+  refId: string;
 }
 
 export interface DashboardRecentDeliveryProject {
@@ -665,22 +1200,360 @@ export interface DashboardRecentDeliveryProject {
 
 export interface DashboardRecentDelivery {
   deliveryId: string;
+  deliveryNumber?: string;
   status: string;
   deliveryDate: string;
   project: DashboardRecentDeliveryProject;
 }
 
 export interface DashboardResponseData {
+  filtersApplied?: DashboardFiltersApplied;
   projectStats: DashboardProjectStats;
   deliveryOverview: DashboardDeliveryOverview;
-  taskOverview: DashboardTaskOverview;
+  materialRequestOverview?: DashboardMaterialRequestOverview;
+  taskOverview?: DashboardTaskOverview;
+  activeSites?: DashboardActiveSite[];
   upcomingDeadlines: DashboardUpcomingDeadline[];
-  recentDeliveries: DashboardRecentDelivery[];
+  upcomingSchedule?: DashboardUpcomingDeadline[];
+  projectTimelineOverall?: DashboardTimelineItem[];
+  freightCarriers?: DashboardFreightCarriers;
+  recentActivity?: DashboardRecentActivityItem[];
+  recentDeliveries?: DashboardRecentDelivery[];
 }
 
 export interface DashboardApiResponse {
   success: boolean;
   message: string;
   data: DashboardResponseData;
+}
+
+export interface ConsolidatedBOMItem {
+  _id: string;
+  partCode: string | null;
+  partColor: string | null;
+  description: string;
+  category: string;
+  costUnit: string | null;
+  totalQty: number;
+  totalLengthFeet: number;
+  totalWeight: number;
+  totalCost: number;
+  buildings: number[];
+  markIds: string[];
+}
+
+export interface ConsolidatedBOM {
+  _id: string;
+  leadId: string;
+  status: string;
+  fileUrl?: string;
+  totalCost: number;
+  totalWeight: number;
+  totalPanelsArea: number;
+  itemCount: number;
+  items: ConsolidatedBOMItem[];
+  sentToVendors?: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConsolidatedBOMApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    consolidatedBOM: ConsolidatedBOM;
+  };
+}
+
+export interface DrawingCommentItem {
+  _id?: string;
+  user?: string;
+  comment?: string;
+  createdAt?: string;
+}
+
+export interface BuildingDrawingFile {
+  _id: string;
+  versionNumber: number;
+  fileUrl: string;
+  fileName: string;
+  status: string;
+  rejectionReason?: string;
+  uploadedBy?: string;
+  uploadedAt: string;
+  reviewedAt?: string;
+  comments?: DrawingCommentItem[];
+}
+
+export interface BuildingDrawingGroupData {
+  buildingId: string;
+  buildingNumber: number;
+  drawings: BuildingDrawingFile[];
+  latestDrawingStatus: string;
+}
+
+export interface BuildingDrawingsResponseData {
+  buildings: BuildingDrawingGroupData[];
+}
+
+export interface BuildingDrawingsApiResponse {
+  success: boolean;
+  message: string;
+  data: BuildingDrawingsResponseData;
+}
+
+export interface CreateDeliveryPayload {
+  title?: string;
+  leadId: string;
+  sectionLocation?: string;
+  deliveryDate: string;
+  description?: string;
+  notes?: string;
+  attachments?: string[];
+}
+
+export interface CreatedDeliveryData {
+  _id: string;
+  deliveryNumber: string;
+  status: string;
+  leadId: string;
+  loadDescription?: string;
+  description?: string;
+  deliveryLocation?: string;
+  deliveryDate: string;
+  additionalNotes?: string;
+  attachments?: string[];
+  statusHistory?: Array<{ status: string; changedAt: string }>;
+}
+
+export interface CreateDeliveryApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    delivery: CreatedDeliveryData;
+  };
+}
+
+export interface WorkLogProject {
+  _id: string;
+  projectName?: string;
+  jobId?: string;
+}
+
+export interface WorkLogTask {
+  _id: string;
+  title: string;
+}
+
+export interface WorkLogLoggedBy {
+  _id: string;
+  name?: string;
+  email?: string;
+}
+
+export interface WorkLogItem {
+  _id: string;
+  leadId: WorkLogProject | string;
+  taskId?: WorkLogTask | string | null;
+  loggedBy?: WorkLogLoggedBy | string;
+  date: string;
+  progress?: number;
+  description?: string;
+  photos?: string[];
+  issues?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface WorkLogsResponseData {
+  logs: WorkLogItem[];
+  total: number;
+}
+
+export interface WorkLogsApiResponse {
+  success: boolean;
+  message: string;
+  data: WorkLogsResponseData;
+}
+
+export interface GetWorkLogsParams {
+  leadId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ConstructionPhase {
+  key: string;
+  label: string;
+  status: "Upcoming" | "Inprogress" | "Completed" | string;
+  date?: string;
+  percentComplete: number;
+  stepsCompleted: number;
+  stepsTotal: number;
+  stageKeys: string[];
+}
+
+export interface ConstructionStepAttachment {
+  name?: string;
+  url: string;
+}
+
+export interface ConstructionStep {
+  key?: string;
+  stepKey: string;
+  label: string;
+  status: "pending" | "in_progress" | "completed" | "delayed" | string;
+  completionPct?: number;
+  percentComplete?: number;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  expectedCompletion?: string | null;
+  notes?: string;
+  attachments?: ConstructionStepAttachment[];
+}
+
+export interface ConstructionPhasesResponseData {
+  project: {
+    leadId: string;
+    projectName: string;
+    jobId: string;
+  };
+  phases: ConstructionPhase[];
+  steps: ConstructionStep[];
+  overallProgressPct: number;
+  currentStepNumber?: number;
+  totalSteps?: number;
+  currentStepLabel?: string;
+}
+
+export interface ConstructionPhasesApiResponse {
+  success: boolean;
+  message: string;
+  data: ConstructionPhasesResponseData;
+}
+
+export interface UpdateStepPayload {
+  status?: string;
+  percentComplete?: number;
+  completionPct?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  startedBy?: string;
+  completedBy?: string;
+  expectedCompletion?: string | null;
+  notes?: string;
+  attachments?: ConstructionStepAttachment[];
+}
+
+export interface UpdateStepApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    stepDetail: {
+      leadId: string;
+      stepKey: string;
+      completionPct: number;
+      startedAt?: string | null;
+      completedAt?: string | null;
+      notes?: string;
+      attachments?: ConstructionStepAttachment[];
+    };
+  };
+}
+
+export interface AddStepAttachmentPayload {
+  name?: string;
+  url: string;
+}
+
+export interface AddStepAttachmentApiResponse {
+  success: boolean;
+  message: string;
+  data?: unknown;
+}
+
+export interface ConstructionTimelineBadge {
+  label: string;
+  tone: "success" | "danger" | "info" | "warning" | "default" | string;
+}
+
+export interface ConstructionTimelineTask {
+  _id: string;
+  id?: string;
+  title: string;
+  status: "todo" | "in_progress" | "done" | string;
+  startDate?: string | null;
+  estimatedEndDate?: string | null;
+  dueDate?: string | null;
+  completedDate?: string | null;
+  completedAt?: string | null;
+  onTimeStatus?: "pending" | "in_progress" | "overdue" | "on_time" | "early" | "late" | "unknown" | string;
+  onTime?: boolean | null;
+  daysLateOrEarly?: number;
+  daysPastDue?: number;
+  canMarkComplete?: boolean;
+  timelineBadge?: ConstructionTimelineBadge;
+  timelineStatusLine?: string;
+  description?: string;
+  workDescription?: string;
+  attachments?: string[];
+  assignedTo?: unknown;
+  priority?: string;
+  leadId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TimelineTasksApiResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    project?: {
+      leadId: string;
+      projectName?: string;
+      jobId?: string;
+    };
+    timelineTasks: ConstructionTimelineTask[];
+    total?: number;
+    stats?: {
+      total: number;
+      todo: number;
+      inProgress: number;
+      done: number;
+      overdue: number;
+    };
+    dataSource?: string;
+  };
+}
+
+export interface ConstructionTaskDetailApiResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    task: ConstructionTimelineTask;
+  };
+}
+
+export interface CompleteTaskPayload {
+  completedAt?: string;
+  completedDate?: string;
+  workDescription?: string;
+  attachments?: string[];
+}
+
+export interface CreateConstructionTaskPayload {
+  title: string;
+  leadId: string;
+  startDate?: string;
+  estimatedEndDate?: string;
+  dueDate?: string;
+  assignedTo?: string | null;
+  priority?: string;
+  description?: string;
+  workDescription?: string;
+  attachments?: string[];
+  status?: string;
 }
 

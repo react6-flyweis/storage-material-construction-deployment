@@ -1,90 +1,128 @@
 import ReactECharts from "echarts-for-react";
+import CardHeader from "../dashboard/CardHeader";
+
+export interface DonutDataItem {
+  value: number;
+  name: string;
+  color: string;
+  displayValue?: string;
+}
 
 interface DonutChartProps {
   title: string;
   total: number;
-  data: { value: number; name: string; color: string }[];
+  data: DonutDataItem[];
   subtitle: string;
+  onViewAll?: () => void;
+  className?: string;
 }
 
-export default function DashboardDonutChart({ title, total, data, subtitle }: DonutChartProps) {
+export default function DashboardDonutChart({
+  title,
+  total,
+  data,
+  subtitle,
+  onViewAll,
+  className = "",
+}: DonutChartProps) {
+  const hasData = total > 0 || data.some((item) => item.value > 0);
+
   const option = {
-    color: data.map(item => item.color),
+    color: hasData ? data.map((item) => item.color) : ["#E5E7EB"],
     tooltip: {
-      trigger: 'item'
+      trigger: "item",
+      formatter: hasData ? "{b}: {c} ({d}%)" : "{b}",
     },
     legend: {
-      show: false
+      show: false,
     },
     series: [
       {
         name: title,
-        type: 'pie',
-        radius: ['50%', '85%'],
+        type: "pie",
+        radius: ["50%", "85%"],
         avoidLabelOverlap: false,
         label: {
           show: false,
-          position: 'center'
+          position: "center",
         },
         emphasis: {
           label: {
             show: false,
-          }
+          },
         },
         labelLine: {
-          show: false
+          show: false,
         },
-        data: data
-      }
+        data: hasData
+          ? data.map((item) => ({ value: item.value, name: item.name }))
+          : [{ value: 1, name: "No data" }],
+      },
     ],
     graphic: [
       {
-        type: 'text',
-        left: 'center',
-        top: '38%',
+        type: "text",
+        left: "center",
+        top: subtitle.includes("\n") || subtitle.length > 10 ? "30%" : "35%",
         style: {
           text: subtitle,
-          textAlign: 'center',
-          fill: '#6B7280',
+          textAlign: "center",
+          fill: "#6B7280",
           fontSize: 12,
-          fontWeight: 500
-        }
+          fontWeight: 500,
+          width: 80,
+          overflow: "break",
+          lineOverflow: "truncate",
+          ellipsis: "...",
+          lineHeight: 15,
+        },
       },
       {
-        type: 'text',
-        left: 'center',
-        top: '50%',
+        type: "text",
+        left: "center",
+        top: "50%",
         style: {
           text: total.toString(),
-          textAlign: 'center',
-          fill: '#111827',
+          textAlign: "center",
+          fill: "#111827",
           fontSize: 28,
-          fontWeight: 'bold'
-        }
-      }
-    ]
+          fontWeight: "bold",
+        },
+      },
+    ],
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-        <button className="text-[11px] font-bold text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-md hover:bg-gray-50 transition-colors">View All</button>
-      </div>
-      
-      <div className="flex flex-col items-center justify-center gap-8">
-        <div className="w-48 h-48 flex-shrink-0">
-          <ReactECharts option={option} style={{ height: '100%', width: '100%' }} />
+    <div
+      className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}
+    >
+      <CardHeader title={title} onViewAll={onViewAll} />
+
+      <div className="p-6 flex flex-col items-center justify-center gap-8 flex-1">
+        <div className="w-48 h-48 shrink-0">
+          <ReactECharts
+            option={option}
+            style={{ height: "100%", width: "100%" }}
+          />
         </div>
-        
+
         <div className="w-full space-y-4 px-2">
           {data.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm font-medium text-gray-500">{item.name}</span>
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-sm font-medium text-gray-500">
+                  {item.name}
+                </span>
               </div>
-              <span className="text-sm font-bold text-gray-900">{item.value}%</span>
+              <span className="text-sm font-bold text-gray-900">
+                {item.displayValue !== undefined
+                  ? item.displayValue
+                  : `${item.value}%`}
+              </span>
             </div>
           ))}
         </div>
