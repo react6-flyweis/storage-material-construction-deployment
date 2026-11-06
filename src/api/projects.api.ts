@@ -34,6 +34,9 @@ import type {
   DashboardApiResponse,
   DashboardFiltersApiResponse,
   DashboardQueryParams,
+  TimelineOverallQueryParams,
+  TimelineOverallApiResponse,
+  ProjectTimelineApiResponse,
   ConsolidatedBOMApiResponse,
   BuildingDrawingsApiResponse,
   PresignedUrlPayload,
@@ -615,6 +618,21 @@ export interface TimelineTasksQueryParams {
   page?: number;
   limit?: number;
 }
+
+export const getConstructionTimelineOverallApi = (
+  params?: TimelineOverallQueryParams
+) => {
+  return axiosInstance.get<TimelineOverallApiResponse>(
+    `/construction/timeline/overall`,
+    { params }
+  );
+};
+
+export const getProjectTimelineApi = (leadId: string) => {
+  return axiosInstance.get<ProjectTimelineApiResponse>(
+    `/construction/projects/${leadId}/timeline`
+  );
+};
 
 export const getProjectTimelineTasksApi = (
   leadId: string,

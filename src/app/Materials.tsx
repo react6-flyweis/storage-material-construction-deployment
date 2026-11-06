@@ -472,21 +472,22 @@ export default function Materials() {
           </div>
 
           {/* 5. Date Range Filter */}
-          <div className="relative" ref={datePickerRef}>
+          <div ref={datePickerRef}>
             <label className="text-[13px] font-medium text-gray-500 mb-1.5 block">
               Date Range
             </label>
-            <button
-              type="button"
-              onClick={() => setIsDateOpen(!isDateOpen)}
-              className="w-full h-10 bg-white border border-gray-200 rounded-md px-3.5 pr-8 text-[13px] text-gray-800 flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-left"
-            >
-              <span className="truncate">{dateRangeDisplay}</span>
-              <Calendar className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsDateOpen(!isDateOpen)}
+                className="w-full h-10 bg-white border border-gray-200 rounded-md px-3.5 pr-8 text-[13px] text-gray-800 flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-left"
+              >
+                <span className="truncate">{dateRangeDisplay}</span>
+              </button>
+              <Calendar className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
 
-            {isDateOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg border border-gray-200 shadow-xl p-4 z-50 space-y-3">
+              {isDateOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg border border-gray-200 shadow-xl p-4 z-50 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                   <span className="text-xs font-semibold text-gray-900">Filter by Date</span>
                   <button
@@ -540,6 +541,7 @@ export default function Materials() {
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
 
