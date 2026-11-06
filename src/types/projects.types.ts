@@ -1071,6 +1071,8 @@ export interface DashboardQueryParams {
   dateFrom?: string;
   toDate?: string;
   dateTo?: string;
+  taskDeadlineDays?: number;
+  taskLimit?: number;
 }
 
 export interface DashboardFiltersApplied {
@@ -1152,11 +1154,110 @@ export interface DashboardUpcomingDeadline {
   daysLeft: number;
 }
 
+export interface UpcomingScheduleItem {
+  taskId?: string;
+  title?: string;
+  status?: string;
+  priority?: string;
+  startDate?: string | null;
+  estimatedEndDate?: string | null;
+  completedDate?: string | null;
+  timelineBadge?: {
+    label: string;
+    tone: "info" | "success" | "warning" | "danger" | string;
+  };
+  timelineStatusLine?: string;
+  onTimeStatus?: string;
+  daysLeft?: number;
+  assignedTo?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+  } | null;
+  project?: {
+    leadId?: string;
+    projectName?: string;
+    jobId?: string;
+    location?: string;
+    lifecycleStatus?: string;
+  };
+  // Fallback project deadline fields
+  leadId?: string;
+  projectName?: string;
+  jobId?: string;
+  location?: string;
+  site?: string;
+  endDate?: string;
+}
+
+export interface UpcomingScheduleMeta {
+  source?: "timeline_tasks" | "project_end_dates" | string;
+  openTaskCount?: number;
+  taskDeadlineDays?: number;
+}
+
 export interface DashboardTimelineItem {
   key: string;
   label: string;
   date: string | null;
   status: string;
+}
+
+export interface TimelineOverallQueryParams {
+  projectId?: string;
+  leadId?: string;
+  buildingId?: string;
+  status?: string;
+  businessUnit?: string;
+}
+
+export interface TimelineOverallResponseData {
+  filtersApplied: {
+    projectId: string | null;
+    buildingId: string | null;
+    status: string | null;
+    businessUnit: string | null;
+  };
+  projectCount: number;
+  projectTimelineOverall: DashboardTimelineItem[];
+}
+
+export interface TimelineOverallApiResponse {
+  success: boolean;
+  message?: string;
+  data: TimelineOverallResponseData;
+}
+
+export interface ProjectTimelineStep {
+  key?: string;
+  label?: string;
+  name?: string;
+  status?: string;
+  date?: string | null;
+  completedDate?: string | null;
+  [key: string]: any;
+}
+
+export interface ProjectTimelineResponseData {
+  project: {
+    leadId: string;
+    projectName: string;
+    jobId: string;
+    location: string;
+    lifecycleStatus: string;
+  };
+  projectTimelineOverall: DashboardTimelineItem[];
+  timeline: DashboardTimelineItem[];
+  steps: ProjectTimelineStep[];
+  overallProgressPct: number;
+  currentStepLabel: string;
+  timelineTasksEndpoint: string;
+}
+
+export interface ProjectTimelineApiResponse {
+  success: boolean;
+  message?: string;
+  data: ProjectTimelineResponseData;
 }
 
 export interface DashboardFreightCarrierRow {
@@ -1214,7 +1315,9 @@ export interface DashboardResponseData {
   taskOverview?: DashboardTaskOverview;
   activeSites?: DashboardActiveSite[];
   upcomingDeadlines: DashboardUpcomingDeadline[];
-  upcomingSchedule?: DashboardUpcomingDeadline[];
+  upcomingSchedule?: UpcomingScheduleItem[];
+  upcomingConstructionTasks?: UpcomingScheduleItem[];
+  upcomingScheduleMeta?: UpcomingScheduleMeta;
   projectTimelineOverall?: DashboardTimelineItem[];
   freightCarriers?: DashboardFreightCarriers;
   recentActivity?: DashboardRecentActivityItem[];

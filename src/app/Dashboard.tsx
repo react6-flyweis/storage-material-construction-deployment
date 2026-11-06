@@ -113,7 +113,10 @@ export default function Dashboard() {
 
   // Query params for dashboard API
   const queryParams = useMemo(() => {
-    const params: DashboardQueryParams = {};
+    const params: DashboardQueryParams = {
+      taskDeadlineDays: 30,
+      taskLimit: 5,
+    };
     if (selectedProject) params.projectId = selectedProject;
     if (selectedBuilding) params.buildingId = selectedBuilding;
     if (selectedStatus) params.status = selectedStatus;
@@ -140,11 +143,33 @@ export default function Dashboard() {
   const projectStats = dashboardData?.projectStats;
   const deliveryOverview = dashboardData?.deliveryOverview;
   const materialOverview = dashboardData?.materialRequestOverview;
-  const activeSitesList = dashboardData?.activeSites || [];
-  const upcomingScheduleList =
-    dashboardData?.upcomingSchedule || dashboardData?.upcomingDeadlines || [];
-  const projectTimelineList = dashboardData?.projectTimelineOverall || [];
-  const freightCarriers = dashboardData?.freightCarriers;
+  const activeSitesList = useMemo(
+    () => (dashboardData?.activeSites || []).slice(0, 5),
+    [dashboardData?.activeSites],
+  );
+  const upcomingScheduleList = useMemo(() => {
+    const list = dashboardData?.upcomingSchedule?.length
+      ? dashboardData.upcomingSchedule
+      : dashboardData?.upcomingConstructionTasks?.length
+        ? dashboardData.upcomingConstructionTasks
+        : dashboardData?.upcomingDeadlines || [];
+    return list.slice(0, 5);
+  }, [
+    dashboardData?.upcomingSchedule,
+    dashboardData?.upcomingConstructionTasks,
+    dashboardData?.upcomingDeadlines,
+  ]);
+  const projectTimelineList = useMemo(
+    () => (dashboardData?.projectTimelineOverall || []).slice(0, 5),
+    [dashboardData?.projectTimelineOverall],
+  );
+  const freightCarriers = useMemo(() => {
+    if (!dashboardData?.freightCarriers) return undefined;
+    return {
+      ...dashboardData.freightCarriers,
+      rows: (dashboardData.freightCarriers.rows || []).slice(0, 5),
+    };
+  }, [dashboardData?.freightCarriers]);
 
   const handleResetFilters = () => {
     setSelectedProject("");
@@ -302,7 +327,8 @@ export default function Dashboard() {
         date: step.date ? dayjs(step.date).format("DD/MM/YYYY") : "-",
         status: (step.status?.toLowerCase() === "completed"
           ? "completed"
-          : step.status?.toLowerCase() === "inprogress"
+          : step.status?.toLowerCase() === "inprogress" ||
+            step.status?.toLowerCase() === "in_progress"
             ? "inprogress"
             : "upcoming") as "completed" | "inprogress" | "upcoming",
       }));
@@ -549,6 +575,7 @@ export default function Dashboard() {
         <UpcomingDeadlines
           title="Upcoming Schedule"
           deadlines={upcomingScheduleList}
+          meta={dashboardData?.upcomingScheduleMeta}
           isLoading={isLoading}
           onViewAll={() => navigate("/projects")}
         />

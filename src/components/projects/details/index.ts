@@ -8,3 +8,4 @@ export * from "./ProjectConstructionTasksCard";
 export * from "./AddConstructionTaskModal";
 export * from "./ConstructionTaskDetailsModal";
 export * from "./ProjectPhotosGallery";
+export * from "./ProjectLifecycleTimelineCard";
