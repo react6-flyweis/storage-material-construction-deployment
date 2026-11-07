@@ -9,6 +9,7 @@ import {
   UpcomingMaterialDeliveryTable,
   ProjectTasksCard,
   ProjectConstructionTasksCard,
+  ProjectLifecycleTimelineCard,
   type ProjectSummary,
   type MaterialDelivery,
   type ProjectTaskItem,
@@ -283,7 +284,13 @@ export default function ProjectViewPage() {
       {/* 3. Project Summary Card */}
       <ProjectSummaryCard summary={summary} />
 
-      {/* 4. Project Construction Task Card */}
+      {/* 4. Overall Lifecycle Timeline (5-phase plant strip) */}
+      <ProjectLifecycleTimelineCard
+        projectId={project?._id || projectId}
+        leadId={project?.leadId}
+      />
+
+      {/* 5. Project Construction Task Card */}
       <ProjectConstructionTasksCard
         projectId={project?._id || projectId}
         leadId={project?.leadId}

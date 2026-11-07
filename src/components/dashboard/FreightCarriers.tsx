@@ -14,7 +14,7 @@ export default function FreightCarriers({
   isLoading = false,
   className = "",
 }: FreightCarriersProps) {
-  const rows = freightCarriers?.rows || [];
+  const rows = (freightCarriers?.rows || []).slice(0, 5);
   const totals = freightCarriers?.totals;
 
   const totalLoads = totals?.totalLoadsToday ?? (freightCarriers ? 0 : 0);

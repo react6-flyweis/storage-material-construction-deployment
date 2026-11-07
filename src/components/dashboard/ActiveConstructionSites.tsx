@@ -80,7 +80,7 @@ export default function ActiveConstructionSites({
                   </td>
                 </tr>
               ) : (
-                sites.slice(0, 4).map((site, idx) => (
+                sites.slice(0, 5).map((site, idx) => (
                   <tr
                     key={site.leadId || idx}
                     className="hover:bg-gray-50/60 transition-colors"
