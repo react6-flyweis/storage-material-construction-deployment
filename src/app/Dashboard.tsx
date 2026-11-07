@@ -104,11 +104,11 @@ export default function Dashboard() {
   // Check if any filter is active
   const hasActiveFilters = Boolean(
     selectedProject ||
-      selectedBuilding ||
-      selectedStatus ||
-      selectedBusinessUnit ||
-      fromDate ||
-      toDate,
+    selectedBuilding ||
+    selectedStatus ||
+    selectedBusinessUnit ||
+    fromDate ||
+    toDate,
   );
 
   // Query params for dashboard API
@@ -328,7 +328,7 @@ export default function Dashboard() {
         status: (step.status?.toLowerCase() === "completed"
           ? "completed"
           : step.status?.toLowerCase() === "inprogress" ||
-            step.status?.toLowerCase() === "in_progress"
+              step.status?.toLowerCase() === "in_progress"
             ? "inprogress"
             : "upcoming") as "completed" | "inprogress" | "upcoming",
       }));
@@ -573,7 +573,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Schedule */}
         <UpcomingDeadlines
-          title="Upcoming Schedule"
+          title="Upcoming task"
           deadlines={upcomingScheduleList}
           meta={dashboardData?.upcomingScheduleMeta}
           isLoading={isLoading}
