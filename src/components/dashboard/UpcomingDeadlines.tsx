@@ -1,10 +1,15 @@
 import CardHeader from "./CardHeader";
 import { CalendarClock } from "lucide-react";
 import { formatDateDisplay } from "../../utils/dashboard.utils";
-import type { DashboardUpcomingDeadline } from "../../types/projects.types";
+import type {
+  DashboardUpcomingDeadline,
+  UpcomingScheduleItem,
+  UpcomingScheduleMeta,
+} from "../../types/projects.types";
 
 interface UpcomingDeadlinesProps {
-  deadlines: DashboardUpcomingDeadline[];
+  deadlines: (DashboardUpcomingDeadline | UpcomingScheduleItem)[];
+  meta?: UpcomingScheduleMeta;
   isLoading?: boolean;
   onViewAll?: () => void;
   title?: string;
@@ -13,11 +18,26 @@ interface UpcomingDeadlinesProps {
 
 export default function UpcomingDeadlines({
   deadlines,
+  meta,
   isLoading = false,
   onViewAll,
   title = "Upcoming Schedule",
   className = "",
 }: UpcomingDeadlinesProps) {
+  const getBadgeClass = (tone?: string) => {
+    switch (tone?.toLowerCase()) {
+      case "danger":
+        return "bg-rose-50 text-rose-600 border-rose-100";
+      case "warning":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      case "success":
+        return "bg-emerald-50 text-emerald-600 border-emerald-100";
+      case "info":
+      default:
+        return "bg-blue-50 text-blue-600 border-blue-100";
+    }
+  };
+
   return (
     <div
       className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}
@@ -51,40 +71,89 @@ export default function UpcomingDeadlines({
                 No upcoming schedule
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
-                There are no upcoming project schedules within the selected timeframe.
+                {meta?.taskDeadlineDays
+                  ? `No upcoming tasks or deadlines within the next ${meta.taskDeadlineDays} days.`
+                  : "There are no upcoming project schedules within the selected timeframe."}
               </p>
             </div>
           ) : (
-            deadlines.map((item, i) => (
-              <div
-                key={item.leadId ? `${item.leadId}-${i}` : i}
-                className="flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-sm font-bold text-gray-900 leading-snug">
-                    {item.projectName || "Unnamed Project"}
-                  </p>
-                  <p className="text-xs text-gray-400 font-medium mt-1 flex items-center gap-1.5">
-                    <span>{item.site || item.location || "Site A"}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
-                  </p>
+            deadlines.slice(0, 5).map((item, i) => {
+              const scheduleItem = item as UpcomingScheduleItem;
+              const displayTitle =
+                scheduleItem.title ||
+                scheduleItem.projectName ||
+                "Upcoming Task";
+
+              const subText =
+                scheduleItem.project?.projectName
+                  ? `${scheduleItem.project.projectName}${scheduleItem.project.location ? ` • ${scheduleItem.project.location}` : ""}`
+                  : scheduleItem.site || scheduleItem.location || "On Site";
+
+              const targetDate =
+                scheduleItem.estimatedEndDate ||
+                scheduleItem.endDate ||
+                scheduleItem.startDate;
+
+              const badge = scheduleItem.timelineBadge;
+              const statusLine = scheduleItem.timelineStatusLine;
+
+              const uniqueKey =
+                scheduleItem.taskId ||
+                (scheduleItem.leadId ? `${scheduleItem.leadId}-${i}` : i);
+
+              return (
+                <div
+                  key={uniqueKey}
+                  className="flex justify-between items-center gap-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-gray-900 leading-snug truncate">
+                      {displayTitle}
+                    </p>
+                    <p className="text-xs text-gray-400 font-medium mt-1 flex items-center gap-1.5 truncate">
+                      <span className="truncate">{subText}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block shrink-0" />
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-rose-500">
+                      {targetDate
+                        ? formatDateDisplay(targetDate)
+                        : "No Date"}
+                    </p>
+
+                    <div className="flex items-center justify-end gap-1.5 mt-1">
+                      {badge ? (
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getBadgeClass(
+                            badge.tone
+                          )}`}
+                        >
+                          {badge.label}
+                        </span>
+                      ) : statusLine ? (
+                        <p className="text-xs text-gray-700 font-semibold">
+                          {statusLine}
+                        </p>
+                      ) : scheduleItem.daysLeft !== undefined ? (
+                        <p className="text-xs text-gray-700 font-semibold">
+                          {scheduleItem.daysLeft} Days Left
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-rose-500">
-                    {item.endDate
-                      ? formatDateDisplay(item.endDate)
-                      : "May 25, 2025"}
-                  </p>
-                  <p className="text-xs text-gray-700 font-semibold mt-1">
-                    {item.daysLeft !== undefined
-                      ? `${item.daysLeft} Days Left`
-                      : "6 Days Left"}
-                  </p>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
+
+        {meta?.source === "project_end_dates" && deadlines.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-100 text-[11px] text-gray-400 text-center">
+            Showing project completion target dates (no open tasks in next {meta.taskDeadlineDays ?? 30} days)
+          </div>
+        )}
       </div>
     </div>
   );

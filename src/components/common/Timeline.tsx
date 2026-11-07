@@ -38,7 +38,7 @@ export default function Timeline({
       />
 
       <div className="p-6 space-y-3.5 flex-1 flex flex-col justify-between">
-        {steps.map((step, idx) => (
+        {steps.slice(0, 5).map((step, idx) => (
           <div
             key={idx}
             className="border border-gray-200 rounded px-4 py-3 flex items-center justify-between bg-white hover:bg-gray-50/50 transition-colors"
