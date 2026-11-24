@@ -226,6 +226,7 @@ export default function DailyLogModel({
 
   return (
     <Modal
+      tourId="daily-log-modal"
       open={open}
       onClose={handleCancel}
       containerClassName="max-h-[98vh] max-w-[550px] overflow-auto scroll-hide"
@@ -409,6 +410,7 @@ export default function DailyLogModel({
               Cancel
             </button>
             <button
+              data-tour="daily-log-submit"
               type="submit"
               disabled={mutation.isPending || isUploading}
               className="px-6 py-2 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white flex items-center gap-2 disabled:opacity-50 transition cursor-pointer"

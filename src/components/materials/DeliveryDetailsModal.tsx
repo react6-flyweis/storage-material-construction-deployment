@@ -108,6 +108,7 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
   return (
     <>
       <Modal
+        tourId="delivery-details-modal"
         open={open}
         onClose={onClose}
         containerClassName="max-w-[900px] p-0"
@@ -159,7 +160,7 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
               {/* Status Banner */}
               <div className="border border-[#3F69B0]/30 rounded-[15px] p-4 flex items-center justify-between mb-5 bg-[#F8FAFF]">
                 <div>
-                  <div className="flex items-center gap-3 mb-1">
+                  <div data-tour="delivery-modal-status" className="flex items-center gap-3 mb-1">
                     <p className="text-xs font-semibold text-[#3F69B0]">Current Status</p>
                     {etaText && (
                       <div className="flex items-center gap-1.5">
@@ -339,7 +340,7 @@ export default function DeliveryDetailsModal({ open, onClose, deliveryId }: Deli
                 </div>
 
                 {/* Documents */}
-                <div>
+                <div data-tour="delivery-modal-documents">
                   <h5 className="text-sm font-bold text-gray-900 mb-3 tracking-tight">Documents</h5>
                   <div className="flex gap-3">
                     <DocumentButton

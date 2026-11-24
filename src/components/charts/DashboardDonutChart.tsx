@@ -15,6 +15,8 @@ interface DonutChartProps {
   subtitle: string;
   onViewAll?: () => void;
   className?: string;
+  /** Lets the product tour find this chart. */
+  tourId?: string;
 }
 
 export default function DashboardDonutChart({
@@ -24,6 +26,7 @@ export default function DashboardDonutChart({
   subtitle,
   onViewAll,
   className = "",
+  tourId,
 }: DonutChartProps) {
   const hasData = total > 0 || data.some((item) => item.value > 0);
 
@@ -94,6 +97,7 @@ export default function DashboardDonutChart({
 
   return (
     <div
+      data-tour={tourId}
       className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}
     >
       <CardHeader title={title} onViewAll={onViewAll} />

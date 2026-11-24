@@ -98,6 +98,7 @@ export default function BundleDetailsPage() {
         {/* Header Action Row */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-100 pb-6 mb-6">
           <button
+            data-tour="bundle-back"
             type="button"
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors shadow-2xs text-sm cursor-pointer"
@@ -108,6 +109,7 @@ export default function BundleDetailsPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              data-tour="bundle-download"
               type="button"
               onClick={() => toast.success("Downloading bundle summary...")}
               className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
@@ -115,6 +117,7 @@ export default function BundleDetailsPage() {
               Download
             </button>
             <button
+              data-tour="bundle-reprint"
               type="button"
               onClick={() => reprintMutation.mutate()}
               disabled={reprintMutation.isPending}
@@ -124,6 +127,7 @@ export default function BundleDetailsPage() {
               Reprint Label
             </button>
             <button
+              data-tour="bundle-mismatch"
               type="button"
               onClick={() => setIsMismatchModalOpen(true)}
               className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
@@ -131,6 +135,7 @@ export default function BundleDetailsPage() {
               Report Mismatch
             </button>
             <button
+              data-tour="bundle-verify"
               type="button"
               onClick={() => verifyMutation.mutate()}
               disabled={verifyMutation.isPending}
@@ -154,7 +159,7 @@ export default function BundleDetailsPage() {
         ) : (
           <>
             {/* Main Content Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 mb-8">
+            <div data-tour="bundle-info" className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 mb-8">
               {/* Bundle Information */}
               <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Bundle Information</h3>
@@ -228,6 +233,7 @@ export default function BundleDetailsPage() {
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Scanned QR Code</h3>
                 <div className="flex items-start gap-6">
                   <button
+                    data-tour="bundle-qr"
                     type="button"
                     onClick={() => setIsQrModalOpen(true)}
                     className="w-30 h-30 border border-gray-200 p-2 rounded-lg bg-white shadow-xs shrink-0 flex items-center justify-center hover:border-purple-300 hover:shadow-md transition-all group relative cursor-pointer"
@@ -273,7 +279,7 @@ export default function BundleDetailsPage() {
 
               {/* Status & Verification Panel */}
               <div className="flex flex-col justify-between">
-                <div>
+                <div data-tour="bundle-verification">
                   <h3 className="text-xl font-bold text-gray-900 mb-3">Bundle Verification Status</h3>
                   <div className="flex items-center justify-between py-2 border-b border-gray-100 mb-4">
                     <span className="text-sm font-bold text-gray-900">Verification Status</span>
@@ -302,7 +308,7 @@ export default function BundleDetailsPage() {
 
             {/* Reported Mismatch Section */}
             {(bundle.hasMismatch || (bundle.mismatchItems && bundle.mismatchItems.length > 0) || bundle.mismatchNotes) && (
-              <div className="mb-8 p-5 bg-red-50/70 border border-red-200 rounded-2xl shadow-xs">
+              <div data-tour="bundle-mismatch-details" className="mb-8 p-5 bg-red-50/70 border border-red-200 rounded-2xl shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-red-200/60 pb-3 mb-4">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
@@ -376,7 +382,7 @@ export default function BundleDetailsPage() {
             )}
 
             {/* Bundle Items Table */}
-            <div className="mt-4">
+            <div data-tour="bundle-items" className="mt-4">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Bundle Items</h3>
               <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-2xs">
                 <table className="w-full border-collapse">

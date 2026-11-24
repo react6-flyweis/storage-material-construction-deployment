@@ -228,7 +228,7 @@ export default function ReportMismatchModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} containerClassName="max-w-4xl">
+    <Modal tourId="report-mismatch-modal" open={open} onClose={handleClose} containerClassName="max-w-4xl">
       {/* Close Icon */}
       <button
         onClick={handleClose}
@@ -252,6 +252,7 @@ export default function ReportMismatchModal({
 
           <div className="flex items-center gap-2">
             <button
+              data-tour="mismatch-submit"
               onClick={handleSubmitReport}
               disabled={mismatchMutation.isPending}
               className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -327,7 +328,7 @@ export default function ReportMismatchModal({
             </div>
 
             {/* Mismatch Items Table */}
-            <div className="mt-4 mb-6">
+            <div data-tour="mismatch-items" className="mt-4 mb-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Items</h3>
               <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                 <table className="w-full border-collapse">
@@ -427,7 +428,7 @@ export default function ReportMismatchModal({
             </div>
 
             {/* Mismatch Reason & Notes */}
-            <div className="mb-6 space-y-4">
+            <div data-tour="mismatch-reason" className="mb-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-1.5">
                   Mismatch Reason <span className="text-red-500">*</span>

@@ -110,6 +110,7 @@ export default function NewTaskModel({
 
   return (
     <Modal
+      tourId="new-task-modal"
       open={open}
       onClose={handleCancel}
       containerClassName="max-h-[98vh] max-w-[550px] overflow-auto scroll-hide"

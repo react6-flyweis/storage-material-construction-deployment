@@ -138,6 +138,7 @@ export default function BundleScanLoads() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
+            data-tour="loads-back"
             type="button"
             onClick={() => navigate("/delivery-tracking/bundle-scan")}
             className="px-4 py-1.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-xs font-semibold rounded-md shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
@@ -158,6 +159,7 @@ export default function BundleScanLoads() {
             <span>Export</span>
           </button>
           <button
+            data-tour="loads-scan"
             type="button"
             onClick={() => setScanModalOpen(true)}
             className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-md text-xs font-semibold shadow-xs transition-all cursor-pointer"
@@ -177,7 +179,7 @@ export default function BundleScanLoads() {
       </div>
 
       {/* 4 Stat Cards using backend stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="loads-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <WaveStatCard
           title="Total Packing Lists"
           value={stats?.totalLoads ?? total}
@@ -218,7 +220,7 @@ export default function BundleScanLoads() {
 
       {/* Filter and Sort Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div data-tour="loads-toolbar" className="flex flex-wrap items-center gap-2.5">
           {/* Search box */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -313,7 +315,7 @@ export default function BundleScanLoads() {
       </div>
 
       {/* Loads Table Container */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
+      <div data-tour="loads-table" className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[900px]">
             <thead>
@@ -437,6 +439,8 @@ export default function BundleScanLoads() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
+                          data-tour="load-view"
+                          data-tour-status={load.totalBundles > 0 ? "has-bundles" : "empty"}
                           type="button"
                           onClick={() =>
                             navigate(

@@ -65,7 +65,7 @@ export const ProjectTasksCard: React.FC<ProjectTasksCardProps> = ({ tasks }) => 
   };
 
   return (
-    <Card className="p-5 sm:p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
+    <Card data-tour="project-tasks" className="p-5 sm:p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
           Project Tasks ({tasks.length})

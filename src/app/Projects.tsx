@@ -190,6 +190,7 @@ export default function Projects() {
         <div className="flex items-center">
           <div className="bg-[#F3F4F6] p-1 rounded-md flex gap-1">
             <button
+              data-tour="projects-tab-calendar"
               onClick={() => {
                 setActiveTab("calendar");
                 setSearchParams({ tab: "calendar" });
@@ -203,6 +204,7 @@ export default function Projects() {
               Calendar
             </button>
             <button
+              data-tour="projects-tab-list"
               onClick={() => {
                 setActiveTab("project");
                 setSearchParams({ tab: "project" });
@@ -221,7 +223,7 @@ export default function Projects() {
 
       {activeTab === "calendar" && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4 mb-3">
-          <div className="flex items-center gap-3">
+          <div data-tour="calendar-project-filter" className="flex items-center gap-3">
             <span className="text-sm font-semibold text-gray-800">Project</span>
             <ProjectSelector
               value={selectedCalendarProjectId}
@@ -239,6 +241,7 @@ export default function Projects() {
             />
           </div>
           <button
+            data-tour="calendar-add-delivery"
             onClick={() => setToggle(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-1.5 cursor-pointer"
           >
@@ -264,7 +267,7 @@ export default function Projects() {
       ) : (
         <div className="space-y-4">
           {/* Project List Card - crisp, clean, not rounded */}
-          <div className="bg-white rounded-md shadow-2xs border border-gray-200/80 overflow-hidden">
+          <div data-tour="projects-list" className="bg-white rounded-md shadow-2xs border border-gray-200/80 overflow-hidden">
             <div className="px-6 py-4">
               <h2 className="text-sm font-bold text-gray-900">Project List</h2>
             </div>
@@ -365,6 +368,7 @@ export default function Projects() {
                         <td className="px-6 py-4 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
                             <button
+                              data-tour="project-row-calendar"
                               onClick={() => {
                                 setSelectedCalendarProjectId(project._id);
                                 setSelectedProjectObj(project);
@@ -381,6 +385,7 @@ export default function Projects() {
                               <span>Calendar</span>
                             </button>
                             <button
+                              data-tour="project-row-view"
                               onClick={() => handleViewProject(project)}
                               className="px-4 py-1 bg-white border border-gray-200 rounded text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-2xs cursor-pointer"
                             >

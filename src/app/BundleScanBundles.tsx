@@ -113,6 +113,7 @@ export default function BundleScanBundles() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
+            data-tour="bundles-back"
             type="button"
             onClick={() => navigate(backToLoadsUrl, { state: { project } })}
             className="px-4 py-1.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-xs font-semibold rounded-md shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
@@ -144,6 +145,7 @@ export default function BundleScanBundles() {
             <span>Export</span>
           </button>
           <button
+            data-tour="bundles-scan"
             type="button"
             onClick={() => setScanOpen(true)}
             className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-md text-xs font-semibold shadow-xs transition-all cursor-pointer"
@@ -163,7 +165,7 @@ export default function BundleScanBundles() {
       </div>
 
       {/* 4 Stat Cards based on backend stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="bundles-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <WaveStatCard
           title="Total Bundles"
           value={stats?.total ?? rawBundles.length}
@@ -203,7 +205,7 @@ export default function BundleScanBundles() {
       </div>
 
       {/* Toolbar: Search, Filters, and Quick Chips */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+      <div data-tour="bundles-toolbar" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Search box */}
           <div className="relative">
@@ -297,7 +299,7 @@ export default function BundleScanBundles() {
       </div>
 
       {/* Bundles Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
+      <div data-tour="bundles-table" className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[900px]">
             <thead>
@@ -454,6 +456,7 @@ export default function BundleScanBundles() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
+                          data-tour="bundle-details"
                           type="button"
                           onClick={() =>
                             navigate(

@@ -21,6 +21,7 @@ export default function ActiveConstructionSites({
   const navigate = useNavigate();
   return (
     <div
+      data-tour="dashboard-sites"
       className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}
     >
       <CardHeader

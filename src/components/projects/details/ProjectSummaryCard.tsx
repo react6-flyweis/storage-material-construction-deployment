@@ -53,7 +53,7 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({ summary 
   };
 
   return (
-    <Card className="p-5 sm:p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
+    <Card data-tour="project-summary" className="p-5 sm:p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
       {/* Top Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">

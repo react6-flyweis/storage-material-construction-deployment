@@ -64,7 +64,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
 
       {/* Chat Footer / Input Form */}
       <div className="p-3 lg:p-4 bg-white border-t border-gray-200 mt-auto">
-        <form onSubmit={onSendMessage} className="flex items-center gap-2">
+        <form data-tour="chat-input" onSubmit={onSendMessage} className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

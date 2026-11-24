@@ -24,6 +24,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   return (
     <>
       <div
+        data-tour="chat-header"
         className="p-3 lg:px-6 lg:py-3.5 bg-white border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors shadow-2xs z-10"
         onClick={() => setIsDrawerOpen(!isDrawerOpen)}
       >
@@ -81,6 +82,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
         <div className="flex items-center gap-3 text-gray-400">
           <button
+            data-tour="chat-info"
             type="button"
             title="Conversation Info"
             className="p-2 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"

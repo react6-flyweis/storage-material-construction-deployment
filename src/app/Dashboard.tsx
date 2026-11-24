@@ -411,6 +411,7 @@ export default function Dashboard() {
           </p>
         </div>
         <button
+          data-tour="dashboard-export"
           onClick={handleExport}
           disabled={isExporting}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-md shadow-sm transition-colors text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -429,10 +430,12 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Section */}
-      <StatsOverview stats={stats} isLoading={isLoading} />
+      <div data-tour="dashboard-stats">
+        <StatsOverview stats={stats} isLoading={isLoading} />
+      </div>
 
       {/* Filters Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:flex xl:flex-nowrap items-center gap-4">
+      <div data-tour="dashboard-filters" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:flex xl:flex-nowrap items-center gap-4">
         {/* Project Filter */}
         <div className="w-full xl:w-auto xl:flex-1 min-w-[200px]">
           <CustomSelect
@@ -516,6 +519,7 @@ export default function Dashboard() {
         {/* Reset / Restart Filter Button (only shown when any filter is active) */}
         {hasActiveFilters && (
           <button
+            data-tour="dashboard-reset-filters"
             onClick={handleResetFilters}
             title="Reset all filters"
             className="xl:ml-auto flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 py-2 rounded border border-gray-200 bg-white shadow-sm w-full sm:w-auto justify-center sm:justify-start hover:bg-gray-50 h-[40px]"
@@ -542,6 +546,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Delivery Overview Donut */}
         <DashboardDonutChart
+          tourId="dashboard-deliveries"
           title="Delivery Overview"
           total={deliveryOverview?.total ?? 0}
           data={deliveryData}
@@ -555,6 +560,7 @@ export default function Dashboard() {
 
         {/* Material Request Overview Donut */}
         <DashboardDonutChart
+          tourId="dashboard-materials"
           title="Material Request Overview"
           total={materialOverview?.total ?? 0}
           data={materialData}

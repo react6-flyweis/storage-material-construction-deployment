@@ -13,6 +13,7 @@ export const ProjectDetailsHeader: React.FC<ProjectDetailsHeaderProps> = ({
   return (
     <div className="flex items-center gap-4">
       <button
+        data-tour="project-back"
         onClick={onBack}
         type="button"
         className="inline-flex items-center gap-2 bg-brand-accent hover:bg-[#1D4ED8] active:scale-95 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all shadow-sm cursor-pointer"
