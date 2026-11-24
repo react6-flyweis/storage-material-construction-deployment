@@ -60,6 +60,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   return (
     <div
+      data-tour="chat-sidebar"
       className={`${
         isMobileChatActive ? "hidden md:flex" : "flex"
       } w-full md:w-80 border-r border-gray-200 flex-col bg-white shrink-0`}
@@ -94,7 +95,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
       {/* Search */}
       <div className="px-4 py-3">
-        <div className="relative">
+        <div data-tour="chat-search" className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
           <input
             type="text"
@@ -117,6 +118,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       {/* Tabs: Groups & Direct */}
       <div className="flex border-b border-gray-100 mb-2 px-2">
         <button
+          data-tour="chat-groups-tab"
           className={`flex-1 py-2.5 text-sm font-semibold transition-all relative cursor-pointer ${
             activeTab === "Groups"
               ? "text-[#2563EB]"
@@ -130,6 +132,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           )}
         </button>
         <button
+          data-tour="chat-direct-tab"
           className={`flex-1 py-2.5 text-sm font-semibold transition-all relative cursor-pointer ${
             activeTab === "Direct"
               ? "text-[#2563EB]"
@@ -169,6 +172,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 activeChat?.type === "group" && activeChat.id === groupId;
               return (
                 <div
+                  data-tour="chat-conversation"
                   key={groupId}
                   onClick={() =>
                     onSelectChat({
@@ -327,6 +331,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       {activeTab === "Direct" && (
         <div className="p-3 border-t border-gray-100 flex flex-col gap-2">
           <button
+            data-tour="chat-new-direct"
             onClick={onOpenNewChat}
             className="w-full flex items-center justify-center gap-2 py-2 bg-[#2563EB] hover:bg-blue-700 active:scale-[0.99] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
