@@ -30,6 +30,7 @@ export default function NotificationButton({
 
   return (
     <button
+      data-tour="header-notifications"
       type="button"
       onClick={handleClick}
       title="Notifications"
