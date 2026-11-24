@@ -223,7 +223,7 @@ export default function Calendar({
           Today
         </button>
 
-        <div className="flex items-center gap-2">
+        <div data-tour="calendar-controls" className="flex items-center gap-2">
           <button
             onClick={() => setCurrentMonth(currentMonth.subtract(1, "month"))}
             className="p-1 text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
@@ -247,7 +247,7 @@ export default function Calendar({
       {/* 3. Main Grid + Sidebar Container */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Calendar Grid Card */}
-        <div className="flex-1 w-full bg-white rounded-xl border border-gray-200/90 shadow-2xs overflow-hidden flex flex-col min-w-0">
+        <div data-tour="calendar-grid" className="flex-1 w-full bg-white rounded-xl border border-gray-200/90 shadow-2xs overflow-hidden flex flex-col min-w-0">
           {/* Days of week header */}
           <div className="grid grid-cols-7 border-b border-gray-200/80 bg-white">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
@@ -383,7 +383,7 @@ export default function Calendar({
         </div>
 
         {/* Right Sidebar: Selected Date Deliveries */}
-        <div className="w-full lg:w-[380px] bg-white rounded-xl p-5 border border-gray-200/90 shadow-2xs flex flex-col shrink-0">
+        <div data-tour="calendar-day-panel" className="w-full lg:w-[380px] bg-white rounded-xl p-5 border border-gray-200/90 shadow-2xs flex flex-col shrink-0">
           {/* Sidebar Date Header */}
           <div className="mb-4">
             <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
@@ -397,6 +397,7 @@ export default function Calendar({
               Deliveries on this date
             </p>
             <button
+              data-tour="calendar-day-add"
               onClick={() => setToggle(true)}
               className="text-xs font-semibold text-blue-600 bg-white border border-blue-600/80 px-2.5 py-1 rounded hover:bg-blue-50 transition-colors flex items-center gap-1 cursor-pointer"
             >
@@ -478,6 +479,7 @@ export default function Calendar({
                   idx: number
                 ) => (
                   <div
+                    data-tour="calendar-delivery"
                     key={delivery.deliveryId || idx}
                     onClick={() => {
                       setSelectedDeliveryId(delivery.deliveryId);
@@ -538,6 +540,7 @@ export default function Calendar({
 
           {/* View All Deliveries Button */}
           <button
+            data-tour="calendar-view-all"
             onClick={() => navigate("/delivery-tracking")}
             className="w-full mt-4 py-2.5 px-4 rounded-lg border border-gray-200 text-xs font-semibold text-blue-600 hover:bg-blue-50/50 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
