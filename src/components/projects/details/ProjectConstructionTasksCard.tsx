@@ -224,7 +224,7 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6 space-y-5">
+    <div data-tour="construction-tasks" className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6 space-y-5">
       {/* Header Row */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg sm:text-xl font-bold text-[#0F172A] tracking-tight">
@@ -232,6 +232,7 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
         </h3>
 
         <button
+          data-tour="construction-task-add"
           type="button"
           onClick={() => setAddModalOpen(true)}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#485563] hover:bg-[#374151] active:bg-[#1F2937] text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
@@ -311,13 +312,15 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
                   </div>
 
                   {/* Status Badge */}
-                  <div className="mt-3.5">{renderStatusBadge(task)}</div>
+                  <div data-tour="construction-task-badge" className="mt-3.5">{renderStatusBadge(task)}</div>
                 </div>
 
                 {/* Action Buttons Row */}
                 <div className="mt-4 pt-1 flex items-center gap-2">
                   {/* View Details Eye Button */}
                   <button
+                    data-tour="construction-task-view"
+                    data-tour-status={canMarkComplete ? "open" : "done"}
                     type="button"
                     title="View Task Details"
                     onClick={(e) => {
@@ -332,6 +335,7 @@ export const ProjectConstructionTasksCard: React.FC<ProjectConstructionTasksCard
                   {/* Mark Complete Button (Only if canMarkComplete is true) */}
                   {canMarkComplete && (
                     <button
+                      data-tour="construction-task-complete"
                       type="button"
                       disabled={markingTaskId === task.id}
                       onClick={(e) => {
