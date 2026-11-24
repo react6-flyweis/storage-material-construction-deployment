@@ -141,6 +141,7 @@ export default function DailyWorkLogsView({
             </p>
           </div>
           <button
+            data-tour="work-logs-add-top"
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-[#3AB449] hover:bg-[#329f40] text-white px-5 py-2 rounded-[8px] text-sm font-normal flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
@@ -151,7 +152,7 @@ export default function DailyWorkLogsView({
       )}
 
       {/* Filters Section (Connected with API leadId filter) */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+      <div data-tour="work-logs-filters" className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {/* Search Input */}
           <div className="space-y-1">
@@ -206,12 +207,13 @@ export default function DailyWorkLogsView({
       </div>
 
       {/* 4. Table Section (Identical to Materials.tsx) */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+      <div data-tour="work-logs-table" className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between">
           <h3 className="text-base font-bold text-gray-900">
             Daily Work Logs ({total})
           </h3>
           <button
+            data-tour="work-logs-add"
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-[#3AB449] hover:bg-[#329f40] text-white px-4 py-1.5 rounded-[8px] text-xs font-normal flex items-center gap-1.5 transition-colors cursor-pointer"
           >
@@ -346,6 +348,7 @@ export default function DailyWorkLogsView({
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         {photos.length > 0 ? (
                           <button
+                            data-tour="work-log-photos"
                             type="button"
                             onClick={(e) => openPhotosModal(photos, e)}
                             className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded transition cursor-pointer"
@@ -377,6 +380,7 @@ export default function DailyWorkLogsView({
                       {/* Action */}
                       <td className="px-5 py-3.5 text-center whitespace-nowrap">
                         <button
+                          data-tour="work-log-view"
                           onClick={() => setActiveLogDetail(log)}
                           className="text-xs font-bold text-gray-700 bg-white border border-gray-200 px-4 py-1.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                         >
