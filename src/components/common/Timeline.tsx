@@ -20,6 +20,7 @@ export default function Timeline({
 }: TimelineProps) {
   return (
     <div
+      data-tour="dashboard-timeline"
       className={`bg-white rounded border border-gray-100 shadow-sm h-full flex flex-col ${className}`}
     >
       <CardHeader
