@@ -11,6 +11,10 @@ export interface ModalProps {
   closeOnOverlayClick?: boolean;
   closeOnEsc?: boolean;
   containerProps?: React.HTMLAttributes<HTMLDivElement>;
+  /** Lets the product tour find this modal. */
+  tourId?: string;
+  /** Status of the record shown, so the tour can tell modals apart. */
+  tourStatus?: string;
 }
 
 const DEFAULT_OVERLAY = "fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 overflow-y-auto";
@@ -25,6 +29,8 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnOverlayClick = true,
   closeOnEsc = true,
   containerProps = {},
+  tourId,
+  tourStatus,
 }) => {
   const show = isOpen ?? open ?? false;
 
@@ -62,9 +68,11 @@ export const Modal: React.FC<ModalProps> = ({
   const combinedContainerClass = cn(DEFAULT_CONTAINER_BASE, containerClassName, containerProps.className);
 
   const modalContent = (
-    <div className={DEFAULT_OVERLAY} onClick={handleOverlayClick}>
+    <div data-modal-backdrop className={DEFAULT_OVERLAY} onClick={handleOverlayClick}>
       <div
         {...containerProps}
+        data-tour={tourId}
+        data-tour-status={tourStatus}
         className={combinedContainerClass}
         onClick={(e) => {
           containerProps.onClick?.(e);
