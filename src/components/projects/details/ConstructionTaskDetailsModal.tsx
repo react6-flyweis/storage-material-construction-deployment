@@ -155,6 +155,8 @@ export const ConstructionTaskDetailsModal: React.FC<
   return (
     <>
       <Modal
+        tourId="construction-task-modal"
+        tourStatus={canMarkComplete ? "open" : "done"}
         open={open && !showSuccessModal}
         onClose={onClose}
         containerClassName="max-w-3xl max-h-[90vh] overflow-y-auto"
@@ -218,6 +220,7 @@ export const ConstructionTaskDetailsModal: React.FC<
             <div>
               {canMarkComplete ? (
                 <button
+                  data-tour="construction-task-modal-complete"
                   type="button"
                   disabled={isMarkingLoading}
                   onClick={handleMarkCompleteClick}
@@ -233,7 +236,7 @@ export const ConstructionTaskDetailsModal: React.FC<
                   )}
                 </button>
               ) : (
-                <div className="px-5 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold rounded-xl text-center">
+                <div data-tour="construction-task-modal-done" className="px-5 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold rounded-xl text-center">
                   Completed
                 </div>
               )}
@@ -278,6 +281,7 @@ export const ConstructionTaskDetailsModal: React.FC<
 
               {/* View All Media Button */}
               <button
+                data-tour="construction-task-modal-media"
                 type="button"
                 onClick={onViewAllMedia}
                 className="inline-flex items-center gap-2 px-4 py-2.5 border border-[#2563EB] text-[#2563EB] hover:bg-blue-50 text-sm font-semibold rounded-xl transition-colors cursor-pointer shrink-0 ml-1"
@@ -291,6 +295,7 @@ export const ConstructionTaskDetailsModal: React.FC<
           {/* Footer / Remove Task */}
           <div className="pt-2">
             <button
+              data-tour="construction-task-modal-remove"
               type="button"
               disabled={isRemovingLoading}
               onClick={handleRemoveTaskClick}
