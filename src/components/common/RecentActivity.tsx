@@ -25,6 +25,7 @@ export default function RecentActivity({
 
   return (
     <div
+      data-tour="dashboard-activity"
       className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col h-full ${className}`}
     >
       <CardHeader
