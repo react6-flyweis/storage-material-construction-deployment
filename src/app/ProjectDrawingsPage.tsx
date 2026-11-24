@@ -240,6 +240,7 @@ export default function ProjectDrawingsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
         <div className="flex items-center gap-4">
           <button
+            data-tour="drawings-back"
             type="button"
             onClick={() => {
               if (window.history.length > 1) {
@@ -265,6 +266,7 @@ export default function ProjectDrawingsPage() {
 
         {/* Primary Action: Upload Photos & Videos (Construction Panel uploads media only) */}
         <button
+          data-tour="drawings-upload"
           type="button"
           onClick={() => setIsUploadModalOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#3F63E1] hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
@@ -276,7 +278,7 @@ export default function ProjectDrawingsPage() {
 
       {/* Main Tabs (Outside of card) */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="inline-flex bg-[#F3F4F6] p-1 rounded-lg border border-[#E5E7EB] gap-1">
+        <div data-tour="drawings-tabs" className="inline-flex bg-[#F3F4F6] p-1 rounded-lg border border-[#E5E7EB] gap-1">
           <button
             type="button"
             onClick={() => setActiveMainTab("all")}
@@ -299,6 +301,7 @@ export default function ProjectDrawingsPage() {
           </button>
 
           <button
+            data-tour="drawings-tab-drawings"
             type="button"
             onClick={() => setActiveMainTab("drawings")}
             className={`px-4 py-2 rounded-md text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
@@ -345,7 +348,7 @@ export default function ProjectDrawingsPage() {
       </div>
 
       {/* Filter and Search Bar: Search on Left, Internal Sub-tabs on Right */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white border border-gray-200 rounded-xl shadow-xs">
+      <div data-tour="drawings-filters" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white border border-gray-200 rounded-xl shadow-xs">
         {/* Left: Search */}
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -401,7 +404,7 @@ export default function ProjectDrawingsPage() {
           )}
 
           {activeMainTab === "drawings" && (
-            <div className="flex items-center gap-1 overflow-x-auto bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs font-medium">
+            <div data-tour="drawings-status-filter" className="flex items-center gap-1 overflow-x-auto bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs font-medium">
               {[
                 "all",
                 "Pending Review",
@@ -439,7 +442,7 @@ export default function ProjectDrawingsPage() {
 
       {/* Section 1: Site Photos & Videos */}
       {!isLoading && (activeMainTab === "all" || activeMainTab === "media") && (
-        <div className="bg-white border border-gray-100 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div data-tour="drawings-media" className="bg-white border border-gray-100 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div className="flex items-center gap-2.5">
               <ImageIcon className="w-5 h-5 text-blue-600" />
@@ -588,6 +591,7 @@ export default function ProjectDrawingsPage() {
 
                 return (
                   <div
+                    data-tour="drawings-building"
                     key={building.buildingId}
                     className="bg-white border border-gray-100 rounded-xl p-5 sm:p-6 shadow-xs space-y-5"
                   >
@@ -626,7 +630,7 @@ export default function ProjectDrawingsPage() {
                               key={file.id}
                               className="bg-white border border-gray-200/80 rounded-xl p-3.5 shadow-xs relative hover:border-blue-200 transition-all flex flex-col justify-between"
                             >
-                              <div className="absolute -top-2.5 right-3 z-10">
+                              <div data-tour="drawing-badge" data-tour-status={file.status} className="absolute -top-2.5 right-3 z-10">
                                 <span
                                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
                                 >
@@ -667,6 +671,7 @@ export default function ProjectDrawingsPage() {
 
                                 <div className="flex items-center gap-1.5 shrink-0">
                                   <button
+                                    data-tour="drawing-download"
                                     type="button"
                                     onClick={() =>
                                       downloadFile(file.fileUrl, file.name)
@@ -677,6 +682,8 @@ export default function ProjectDrawingsPage() {
                                     <ArrowDown className="w-4 h-4" />
                                   </button>
                                   <button
+                                    data-tour="drawing-view"
+                                    data-tour-status={file.status}
                                     type="button"
                                     onClick={() => handleOpenDrawing(file)}
                                     className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-full transition-colors cursor-pointer"
@@ -714,7 +721,7 @@ export default function ProjectDrawingsPage() {
       {/* View Drawing / Media Modal */}
       {isViewModalOpen && selectedDrawing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+          <div data-tour="drawing-view-modal" data-tour-status={selectedDrawing.status} className="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
               <div className="space-y-1">
@@ -756,6 +763,7 @@ export default function ProjectDrawingsPage() {
                 </div>
               </div>
               <button
+                data-tour-close
                 type="button"
                 onClick={() => setIsViewModalOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
@@ -767,7 +775,7 @@ export default function ProjectDrawingsPage() {
             {/* Rejection Note inside Modal if Rejected */}
             {selectedDrawing.status === "Rejected" &&
               selectedDrawing.rejectionReason && (
-                <div className="mx-6 mt-4 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
+                <div data-tour="drawing-rejection" className="mx-6 mt-4 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <div>
                     <h5 className="text-xs font-bold text-red-800">
@@ -827,7 +835,7 @@ export default function ProjectDrawingsPage() {
 
             {/* Revision Messages Section */}
             {hasRevision && (
-              <div className="px-6 py-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white">
+              <div data-tour="drawing-revision" className="px-6 py-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white">
                 <div className="space-y-1.5">
                   <h4 className="text-sm font-bold text-gray-900">
                     Revision Message
@@ -850,6 +858,7 @@ export default function ProjectDrawingsPage() {
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-gray-100 bg-white flex flex-wrap items-center justify-between gap-3">
               <button
+                data-tour="drawing-modal-download"
                 type="button"
                 onClick={() =>
                   downloadFile(selectedDrawing.fileUrl, selectedDrawing.name)
