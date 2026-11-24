@@ -111,6 +111,7 @@ export default function RequestMaterialModel({
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Modal
+        tourId="request-material-modal"
         open={open}
         onClose={handleClose}
         containerClassName="md:max-w-[640px] p-0 max-h-[85vh]"
@@ -312,6 +313,7 @@ export default function RequestMaterialModel({
               Cancel
             </button>
             <button
+              data-tour="request-material-submit"
               type="submit"
               className="px-8 py-2.5 rounded-[12px] bg-[#2563EB] text-white font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
               disabled={mutation.isPending}
