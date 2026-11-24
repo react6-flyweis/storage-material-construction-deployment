@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import NotificationButton from "./NotificationButton";
 import UserMenu from "./UserMenu";
 import HeaderSearch from "./HeaderSearch";
+import { TourHubMenu } from "@/modules/tour/components/tour-hub-menu";
 
 type Props = {
   count?: number;
@@ -40,6 +41,7 @@ export default function Header({
 
         {/* Panel collapse toggle — desktop only, left of search */}
         <button
+          data-tour="sidebar-toggle"
           type="button"
           className="hidden lg:flex items-center justify-center w-9 h-9 rounded-lg bg-[#F0F4FF] hover:bg-[#dde6ff] text-[#1D51A4] transition-colors shrink-0 cursor-pointer"
           onClick={onPanelToggle}
@@ -58,6 +60,7 @@ export default function Header({
       <div className="flex lg:gap-8 gap-3 items-center">
         <div className="flex items-center gap-4">
           {" "}
+          <TourHubMenu />
           <NotificationButton count={count} />
           <UserMenu />
         </div>

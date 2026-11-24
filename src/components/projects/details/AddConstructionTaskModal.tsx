@@ -176,6 +176,7 @@ export const AddConstructionTaskModal: React.FC<
   return (
     <>
       <Modal
+        tourId="add-construction-task-modal"
         open={open && !showSuccessModal}
         onClose={handleModalClose}
         containerClassName="p-0 max-w-lg max-h-[90vh] overflow-y-auto"
@@ -351,6 +352,7 @@ export const AddConstructionTaskModal: React.FC<
             Cancel
           </button>
           <button
+            data-tour="add-construction-task-submit"
             type="submit"
             disabled={isSubmitting || !step.trim()}
             className="px-8 py-2.5 rounded-xl bg-brand-accent hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition shadow-sm cursor-pointer flex items-center justify-center gap-2"

@@ -116,6 +116,7 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
           </div>
         </div>
         <button
+          data-tour="settings-save"
           onClick={handleSaveSettings}
           disabled={isSaving || isProfileLoading}
           className="md:px-4 ml-auto md:mt-0 mt-4 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg transition-opacity md:text-sm text-xs font-normal min-w-[128px] w-fit cursor-pointer flex items-center justify-center gap-2"
@@ -148,7 +149,7 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
       <h3 className="text-base font-bold text-gray-900 lg:my-1">
         Account & Security Settings
       </h3>
-      <div className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100 space-y-6">
+      <div data-tour="settings-account" className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100 space-y-6">
         {/* Two Factor Authentication */}
         <div className="flex items-center justify-between">
           <div>
@@ -229,7 +230,7 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
       <h3 className="text-base font-bold text-gray-900 lg:my-1">
         Notification Settings
       </h3>
-      <div className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100 space-y-6">
+      <div data-tour="settings-notifications" className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100 space-y-6">
         {/* Dashboard Notifications */}
         <div className="flex items-center justify-between">
           <div>

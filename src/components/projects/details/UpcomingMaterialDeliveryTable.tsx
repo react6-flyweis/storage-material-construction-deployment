@@ -83,7 +83,7 @@ export const UpcomingMaterialDeliveryTable: React.FC<UpcomingMaterialDeliveryTab
   };
 
   return (
-    <div className="space-y-3.5">
+    <div data-tour="project-deliveries" className="space-y-3.5">
       <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
         Upcoming Material Delivery {deliveries.length > 0 && `(${deliveries.length})`}
       </h3>
@@ -162,6 +162,7 @@ export const UpcomingMaterialDeliveryTable: React.FC<UpcomingMaterialDeliveryTab
                   {/* ID */}
                   <TableCell className="font-bold text-brand-accent text-xs sm:text-sm px-4 sm:px-6 py-4">
                     <button
+                      data-tour="project-delivery-open"
                       type="button"
                       onClick={() => onSelectDelivery?.(delivery)}
                       className="hover:underline font-bold text-left cursor-pointer"

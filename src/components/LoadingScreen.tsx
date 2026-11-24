@@ -1,6 +1,7 @@
 const LoadingScreen = () => {
   return (
     <div
+      data-tour-loading
       className="min-h-screen flex items-center justify-center bg-background text-foreground"
       aria-busy="true"
       aria-live="polite"

@@ -126,6 +126,7 @@ export default function Notifications() {
           </div>
           {statsData.unread > 0 && (
             <button
+              data-tour="notifications-read-all"
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending}
               className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-[#2563EB] hover:bg-blue-100 border border-blue-200 transition cursor-pointer self-start sm:self-auto disabled:opacity-50"
@@ -135,11 +136,14 @@ export default function Notifications() {
             </button>
           )}
         </div>
-        <StatsOverview stats={stats} />
+        <div data-tour="notifications-stats">
+          <StatsOverview stats={stats} />
+        </div>
       </div>
 
       {/* Filter Tabs */}
       <div
+        data-tour="notifications-filters"
         className="
           rounded-[8px] lg:p-6 lg:px-10 p-3 border !bg-white border-[#F3F4F6]
           !shadow-[0px_2px_4px_-2px_rgba(0,0,0,0.1),_0px_4px_6px_-1px_rgba(0,0,0,0.1)]
@@ -197,6 +201,7 @@ export default function Notifications() {
 
               return (
                 <div
+                  data-tour="notification-row"
                   key={item._id}
                   onClick={() => handleNotificationClick(item)}
                   className={`flex sm:gap-4 gap-3 lg:px-10 px-4 py-5 hover:bg-slate-50/70 transition cursor-pointer group ${
@@ -223,6 +228,7 @@ export default function Notifications() {
                       <div className="flex items-center gap-2">
                         {!item.isRead && (
                           <button
+                            data-tour="notification-read"
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -235,6 +241,7 @@ export default function Notifications() {
                           </button>
                         )}
                         <button
+                          data-tour="notification-delete"
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();

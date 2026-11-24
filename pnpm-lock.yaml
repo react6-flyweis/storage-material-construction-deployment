@@ -47,6 +47,9 @@ importers:
       dayjs:
         specifier: ^1.11.19
         version: 1.11.21
+      driver.js:
+        specifier: ^1.14.0
+        version: 1.14.0
       echarts:
         specifier: ^6.0.0
         version: 6.1.0
@@ -1584,6 +1587,9 @@ packages:
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
+
+  driver.js@1.14.0:
+    resolution: {integrity: sha512-BnCFuNU8QO2rrYiDra43Ortx6D6chqMvEMF1q3fWQfsC3xNyCX4T1P1vZDTXTxGdtcXh2v5r11hxSpNLF3DJVw==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -4449,6 +4455,8 @@ snapshots:
       is-obj: 2.0.0
 
   dotenv@17.4.2: {}
+
+  driver.js@1.14.0: {}
 
   dunder-proto@1.0.1:
     dependencies:

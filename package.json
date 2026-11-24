@@ -23,6 +23,7 @@
     "clsx": "^2.1.1",
     "cn": "^0.5.0",
     "dayjs": "^1.11.19",
+    "driver.js": "^1.14.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.5",
     "html5-qrcode": "^2.3.8",

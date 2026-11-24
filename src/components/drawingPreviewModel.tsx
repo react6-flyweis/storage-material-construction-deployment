@@ -134,6 +134,7 @@ export default function DrawingPreviewModal({
 
   return (
     <Modal
+      tourId="drawing-preview-modal"
       open={open}
       onClose={onClose}
       containerClassName="max-w-[1100px] max-h-[95vh] rounded-2xl overflow-auto scroll-hide"
@@ -193,7 +194,8 @@ export default function DrawingPreviewModal({
         {/* Footer / Action Section as in Plant Panel */}
         <div className="lg:px-6 px-4 py-4 border-t space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <button 
+            <button
+              data-tour="drawing-preview-download"
               onClick={handleDownload}
               className="flex items-center gap-2 bg-[#2563EB] text-white px-5 py-2 rounded-full text-xs md:text-sm font-medium hover:bg-blue-700 transition shadow-xs cursor-pointer"
             >

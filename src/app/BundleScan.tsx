@@ -61,6 +61,7 @@ export default function BundleScan() {
 
         <div className="flex items-center gap-2.5">
           <button
+            data-tour="dispatch-export"
             type="button"
             className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-white border border-gray-200 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-xs transition-all"
           >
@@ -68,6 +69,7 @@ export default function BundleScan() {
             <span>Export</span>
           </button>
           <button
+            data-tour="dispatch-scan"
             type="button"
             onClick={() => setScanModalOpen(true)}
             className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#6D28D9] hover:bg-[#5B21B6] text-white rounded-md text-xs font-semibold shadow-xs transition-all cursor-pointer"
@@ -76,6 +78,7 @@ export default function BundleScan() {
             <span>Scan QR Code</span>
           </button>
           <button
+            data-tour="dispatch-manual"
             type="button"
             onClick={() => setScanModalOpen(true)}
             className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#6366F1] hover:bg-[#5558E6] text-white rounded-md text-xs font-semibold shadow-xs transition-all cursor-pointer"
@@ -87,7 +90,7 @@ export default function BundleScan() {
       </div>
 
       {/* Projects Table Container */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
+      <div data-tour="dispatch-projects" className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
         {/* Table Title and Controls */}
         <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
           <h2 className="text-sm sm:text-base font-bold text-gray-900">
@@ -230,6 +233,8 @@ export default function BundleScan() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
+                          data-tour="dispatch-project-view"
+                          data-tour-status={proj.totalBundles > 0 ? "has-bundles" : "empty"}
                           type="button"
                           onClick={() =>
                             navigate(

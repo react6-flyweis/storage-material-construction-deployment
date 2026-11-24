@@ -52,7 +52,7 @@ export const ProjectLifecycleTimelineCard: React.FC<ProjectLifecycleTimelineCard
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-6">
+    <div data-tour="project-lifecycle" className="bg-white rounded-lg border border-gray-100 shadow-sm p-6">
       {/* Top Header & Progress */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
         <div>
@@ -153,6 +153,7 @@ export const ProjectLifecycleTimelineCard: React.FC<ProjectLifecycleTimelineCard
       {granularSteps.length > 0 && (
         <div className="pt-3 border-t border-gray-100">
           <button
+            data-tour="project-lifecycle-steps"
             type="button"
             onClick={() => setShowGranularSteps((prev) => !prev)}
             className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 cursor-pointer"
