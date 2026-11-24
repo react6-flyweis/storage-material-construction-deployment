@@ -451,7 +451,7 @@ export default function ScanQRCodeModal({
     : null;
 
   return (
-    <Modal open={open} onClose={handleClose} containerClassName="max-w-[480px] items-center">
+    <Modal tourId="scan-qr-modal" open={open} onClose={handleClose} containerClassName="max-w-[480px] items-center">
       {/* Close Button */}
       <button
         onClick={handleClose}
@@ -582,6 +582,7 @@ export default function ScanQRCodeModal({
           /* Default Idle State */
           <div className="w-full flex flex-col items-center">
             <button
+              data-tour="scan-camera"
               type="button"
               onClick={startCamera}
               className="w-full bg-linear-to-r from-[#2563EB] to-[#4F46E5] text-white py-3 px-6 rounded-xl flex items-center justify-center gap-2.5 hover:opacity-90 transition-all shadow-md font-semibold text-base"
@@ -617,7 +618,7 @@ export default function ScanQRCodeModal({
           </div>
         )}
 
-        <div>
+        <div data-tour="scan-manual">
           <label className="text-sm font-bold text-gray-900 mb-2 block">Enter Bundle ID</label>
           <input
             ref={manualInputRef}
@@ -649,6 +650,7 @@ export default function ScanQRCodeModal({
           Cancel
         </button>
         <button
+          data-tour="scan-submit"
           onClick={() => processScan(bundleId)}
           disabled={scanMutation.isPending || !bundleId.trim()}
           className="w-full py-3 bg-linear-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold rounded-xl text-base hover:opacity-90 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
