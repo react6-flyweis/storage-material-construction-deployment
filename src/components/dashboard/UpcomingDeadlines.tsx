@@ -40,6 +40,7 @@ export default function UpcomingDeadlines({
 
   return (
     <div
+      data-tour="dashboard-upcoming"
       className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col ${className}`}
     >
       <CardHeader title={title} onViewAll={onViewAll} />
