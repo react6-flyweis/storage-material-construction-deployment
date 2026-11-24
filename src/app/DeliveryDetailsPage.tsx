@@ -317,6 +317,7 @@ export default function DeliveryDetailsPage() {
       <div className="flex flex-wrap md:items-center justify-between gap-4 pt-2">
         <div className="flex items-center gap-4">
           <button
+            data-tour="delivery-back"
             type="button"
             onClick={handleBack}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
@@ -341,7 +342,7 @@ export default function DeliveryDetailsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div data-tour="delivery-downloads" className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => downloadPackingListMutation.mutate()}
@@ -376,7 +377,7 @@ export default function DeliveryDetailsPage() {
         {/* Left Column */}
         <div className="space-y-6">
           {/* Delivery Flow Banner */}
-          <div className="bg-[#F0F9FF] border border-[#BEE3F8]/60 rounded-2xl p-5 shadow-xs">
+          <div data-tour="delivery-flow" className="bg-[#F0F9FF] border border-[#BEE3F8]/60 rounded-2xl p-5 shadow-xs">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
               Delivery Flow
             </p>
@@ -414,7 +415,7 @@ export default function DeliveryDetailsPage() {
           </div>
 
           {/* Delivery Overview Card */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+          <div data-tour="delivery-overview" className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
               <h2 className="text-base sm:text-lg font-bold text-gray-900">
                 Delivery Overview
@@ -579,7 +580,7 @@ export default function DeliveryDetailsPage() {
         {/* Right Column / Sidebar */}
         <div className="space-y-6">
           {/* Delivery Status Card - Strictly read-only, NO update option */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-3.5">
+          <div data-tour="delivery-status" className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-3.5">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
               Delivery Status
             </h2>
@@ -608,7 +609,7 @@ export default function DeliveryDetailsPage() {
           </div>
 
           {/* Receiving Point of Contact Card */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-4">
+          <div data-tour="delivery-poc" className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
               Receiving Point of Contact
             </h2>
@@ -628,7 +629,7 @@ export default function DeliveryDetailsPage() {
           </div>
 
           {/* Documents & Downloads */}
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs space-y-3">
+          <div data-tour="delivery-documents" className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs space-y-3">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
               Documents & Downloads
             </h2>
@@ -671,7 +672,7 @@ export default function DeliveryDetailsPage() {
           </div>
 
           {/* Status History Card */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-4">
+          <div data-tour="delivery-history" className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs space-y-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
               Status History
             </h2>
