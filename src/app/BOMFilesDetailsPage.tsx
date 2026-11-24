@@ -228,6 +228,7 @@ export default function BOMFilesDetailsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
         <div className="flex items-center gap-4">
           <button
+            data-tour="bom-back"
             type="button"
             onClick={handleBack}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
@@ -242,6 +243,7 @@ export default function BOMFilesDetailsPage() {
 
         <div>
           <button
+            data-tour="bom-download"
             type="button"
             onClick={handleDownload}
             disabled={!consolidatedBOM?.fileUrl && sortedItems.length === 0}
@@ -270,7 +272,7 @@ export default function BOMFilesDetailsPage() {
 
         <div className="p-6 sm:p-8 space-y-7">
           {/* BOM Summary Section */}
-          <div className="bg-[#F8FAFC] border border-gray-100 rounded-xl p-5 sm:p-6 max-w-sm space-y-3.5">
+          <div data-tour="bom-summary" className="bg-[#F8FAFC] border border-gray-100 rounded-xl p-5 sm:p-6 max-w-sm space-y-3.5">
             <h3 className="text-base font-bold text-gray-900 tracking-tight">
               BOM Summary
             </h3>
@@ -305,7 +307,7 @@ export default function BOMFilesDetailsPage() {
           </div>
 
           {/* Technical Spec Box */}
-          <div className="border-2 border-black rounded-xs overflow-hidden bg-white">
+          <div data-tour="bom-sheet" className="border-2 border-black rounded-xs overflow-hidden bg-white">
             <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x-2 divide-black">
               {/* Left: Storage Materials Logo */}
               <div className="md:col-span-5 p-4 sm:p-6 flex items-center justify-center bg-white">
