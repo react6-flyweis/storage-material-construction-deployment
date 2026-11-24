@@ -83,7 +83,7 @@ export default function Tasks() {
         </div>
 
         {/* Tab Switcher Pills */}
-        <div className="flex bg-[#F3F4F6] w-fit rounded-[10px] p-1 h-11 border border-[#E5E7EB] shrink-0">
+        <div data-tour="tasks-switcher" className="flex bg-[#F3F4F6] w-fit rounded-[10px] p-1 h-11 border border-[#E5E7EB] shrink-0">
           <button
             onClick={() => handleTabChange("Task Board")}
             className={`px-4 sm:px-5 py-1.5 rounded-[8px] text-xs sm:text-sm font-semibold transition flex items-center gap-2 cursor-pointer ${
@@ -97,6 +97,7 @@ export default function Tasks() {
           </button>
 
           <button
+            data-tour="tasks-switch-logs"
             onClick={() => handleTabChange("Daily Work Logs")}
             className={`px-4 sm:px-5 py-1.5 rounded-[8px] text-xs sm:text-sm font-semibold transition flex items-center gap-2 cursor-pointer ${
               currentTab === "Daily Work Logs"
@@ -113,11 +114,13 @@ export default function Tasks() {
       {/* Render Current Tab Content */}
       {currentTab === "Task Board" ? (
         <div className="space-y-6">
-          <StatsOverview
-            stats={stats}
-            gridCols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-            isLoading={isLoading}
-          />
+          <div data-tour="tasks-stats">
+            <StatsOverview
+              stats={stats}
+              gridCols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+              isLoading={isLoading}
+            />
+          </div>
           <TaskBoard tasks={tasksList} isLoading={isLoading} />
         </div>
       ) : (
