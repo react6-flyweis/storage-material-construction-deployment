@@ -190,6 +190,7 @@ const ProfileView: React.FC<ProfileViewProps> = () => {
       <div className="flex flex-wrap md:items-center items-start justify-between gap-4">
         <div className="flex items-start gap-4 flex-wrap">
           <button
+            data-tour="profile-back"
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium cursor-pointer"
           >
@@ -206,6 +207,7 @@ const ProfileView: React.FC<ProfileViewProps> = () => {
           </div>
         </div>
         <button
+          data-tour="profile-save"
           onClick={handleSaveProfile}
           disabled={
             updateProfileMutation.isPending ||
@@ -259,6 +261,7 @@ const ProfileView: React.FC<ProfileViewProps> = () => {
               className="hidden"
             />
             <button
+              data-tour="profile-picture"
               onClick={handleProfilePictureClick}
               disabled={isUploadingAvatar}
               className="flex items-center gap-2 px-4 py-2 border border-[#E5E7EB] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 cursor-pointer"
@@ -277,7 +280,7 @@ const ProfileView: React.FC<ProfileViewProps> = () => {
       <h3 className="text-base font-bold text-gray-900 lg:my-1">
         Basic Information
       </h3>
-      <div className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100">
+      <div data-tour="profile-info" className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-gray-700">
@@ -346,7 +349,7 @@ const ProfileView: React.FC<ProfileViewProps> = () => {
         </p>
       </div>
 
-      <div className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100">
+      <div data-tour="profile-security" className="bg-white lg:rounded-xl rounded-lg lg:p-6 p-3 border border-gray-100">
         <div className="space-y-6">
           <div className="w-full md:w-1/2 pr-0 md:pr-3">
             <div className="flex flex-col gap-1.5">
@@ -395,6 +398,7 @@ const ProfileView: React.FC<ProfileViewProps> = () => {
 
           <div className="flex justify-end pt-2">
             <button
+              data-tour="profile-password-save"
               type="button"
               onClick={handleSavePassword}
               disabled={changePasswordMutation.isPending}
