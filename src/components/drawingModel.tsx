@@ -231,6 +231,7 @@ export default function DrawingModel({
 
   return (
     <Modal
+      tourId="upload-media-modal"
       open={open}
       onClose={handleModalClose}
       containerClassName="max-w-[540px] w-full p-0"

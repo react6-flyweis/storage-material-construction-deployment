@@ -108,6 +108,7 @@ export default function UpdateSiteContactModal({
 
   return (
     <Modal
+      tourId="site-contact-modal"
       open={open}
       onClose={handleClose}
       containerClassName="max-w-[600px] p-5"

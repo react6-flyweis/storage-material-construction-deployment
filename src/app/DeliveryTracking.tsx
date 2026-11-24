@@ -478,6 +478,7 @@ export default function DeliveryTracking() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            data-tour="deliveries-export"
             onClick={handleExport}
             disabled={isExporting}
             className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50"
@@ -493,7 +494,7 @@ export default function DeliveryTracking() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="deliveries-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <div
             key={i}
@@ -522,7 +523,7 @@ export default function DeliveryTracking() {
       </div>
 
       {/* Main Filter & Search Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+      <div data-tour="deliveries-toolbar" className="flex flex-col lg:flex-row lg:items-center gap-4">
         {/* Search input */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -581,6 +582,7 @@ export default function DeliveryTracking() {
 
           {/* Toggle Advanced Filters Drawer */}
           <button
+            data-tour="deliveries-filters-btn"
             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
             className={`flex items-center gap-2 px-4 h-[40px] rounded-lg text-xs font-bold uppercase tracking-wider transition-all border shadow-sm ${
               isFilterExpanded || activeFiltersCount > 0
@@ -613,13 +615,14 @@ export default function DeliveryTracking() {
 
       {/* Expandable Advanced Filters Drawer */}
       {isFilterExpanded && (
-        <div className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div data-tour="deliveries-filters" className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-gray-100">
             <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-blue-600" />
               Advanced Filters
             </h4>
             <button
+              data-tour-close
               onClick={() => setIsFilterExpanded(false)}
               className="text-gray-400 hover:text-gray-600 text-xs font-bold uppercase tracking-wider flex items-center gap-1"
             >
@@ -998,6 +1001,8 @@ export default function DeliveryTracking() {
         ) : (
           deliveries.map((item, i) => (
             <div
+              data-tour="delivery-card"
+              data-tour-status={item.status}
               key={item.deliveryId || i}
               className="bg-white rounded-lg shadow-sm border border-gray-50 overflow-hidden"
             >
@@ -1045,6 +1050,7 @@ export default function DeliveryTracking() {
                     </div>
                   </div>
                   <button
+                    data-tour="delivery-view-details"
                     onClick={() => {
                       setSelectedDetailId(item.deliveryId);
                       setDetailsOpen(true);
@@ -1207,6 +1213,7 @@ export default function DeliveryTracking() {
                 {item.status !== "delivered" && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
                     <button
+                      data-tour="delivery-mark-received"
                       onClick={() =>
                         markReceivedMutation.mutate(item.deliveryId)
                       }
@@ -1219,6 +1226,7 @@ export default function DeliveryTracking() {
                         : "Mark as Received"}
                     </button>
                     <button
+                      data-tour="delivery-scan"
                       onClick={() => {
                         setScannedProjectId(item.leadId);
                         setScanOpen(true);
@@ -1229,6 +1237,7 @@ export default function DeliveryTracking() {
                       Scan QR Code
                     </button>
                     <button
+                      data-tour="delivery-partial"
                       onClick={() => {
                         if (item.leadId) {
                           navigate(
@@ -1254,6 +1263,7 @@ export default function DeliveryTracking() {
                 {/* Links Footer */}
                 <div className="flex items-center gap-3 border-t border-gray-50 pt-6">
                   <button
+                    data-tour="delivery-site-contact"
                     onClick={() => {
                       setSelectedContactDelivery({
                         id: item.deliveryId,

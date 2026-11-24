@@ -34,6 +34,7 @@ const QRCodeDataModal: React.FC<QRCodeDataModalProps> = ({ open, isOpen, onClose
 
   return (
     <Modal
+      tourId="bundle-qr-modal"
       open={show}
       onClose={onClose}
       containerClassName="max-w-2xl"
@@ -98,6 +99,7 @@ const QRCodeDataModal: React.FC<QRCodeDataModalProps> = ({ open, isOpen, onClose
       {/* Action Button (Centered Print Button) */}
       <div className="flex justify-center w-full mt-4">
         <button
+          data-tour="bundle-qr-print"
           className="w-full max-w-[320px] py-2 bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-bold rounded-[16px] shadow-lg shadow-blue-100 hover:opacity-90 transition-all text-xl"
           onClick={handlePrint}
         >

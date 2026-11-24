@@ -230,7 +230,7 @@ export default function MaterialRequestDetailsModal({
 
   return (
     <>
-      <Modal open={open} onClose={handleClose} containerClassName="max-w-[580px] p-0">
+      <Modal tourId="material-request-modal" tourStatus={request?.status?.toLowerCase()} open={open} onClose={handleClose} containerClassName="max-w-[580px] p-0">
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 flex-shrink-0">
         <h2 className="text-[17px] font-bold text-gray-900">
@@ -280,6 +280,7 @@ export default function MaterialRequestDetailsModal({
               {/* Top Status Badge */}
               <div className="mb-6">
                 <span
+                  data-tour="material-request-status"
                   className={`inline-block px-3 py-1 rounded-md text-sm font-semibold capitalize ${getStatusBadgeClass(fetchedRequest.status)}`}
                 >
                   {fetchedRequest.status}
@@ -377,7 +378,7 @@ export default function MaterialRequestDetailsModal({
               </div>
 
               {/* Requested Items */}
-              <div className="mt-8">
+              <div data-tour="material-request-items" className="mt-8">
                 <h3 className="text-sm font-bold text-gray-900 mb-4">
                   Requested Items ({fetchedRequest.requestedItems.length})
                 </h3>
@@ -478,7 +479,7 @@ export default function MaterialRequestDetailsModal({
               {/* Cancellation Reason (shown if request is cancelled) */}
               {fetchedRequest.status?.toLowerCase() === "cancelled" &&
                 (fetchedRequest.reviewNotes || fetchedRequest.cancellationReason) && (
-                  <div className="mt-6 p-4 bg-red-50/70 border border-red-200/80 rounded-lg">
+                  <div data-tour="material-request-reason" className="mt-6 p-4 bg-red-50/70 border border-red-200/80 rounded-lg">
                     <div className="flex items-center gap-2 mb-1.5">
                       <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
                       <h4 className="text-xs font-bold text-red-900">
@@ -494,12 +495,13 @@ export default function MaterialRequestDetailsModal({
               {/* Action Button / Cancellation Status */}
               <div className="mt-8 flex justify-center pt-4">
                 {fetchedRequest.status?.toLowerCase() === "cancelled" ? (
-                  <div className="flex items-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 rounded-lg text-sm font-semibold border border-red-200">
+                  <div data-tour="material-request-cancelled" className="flex items-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 rounded-lg text-sm font-semibold border border-red-200">
                     <XCircle className="w-4 h-4" />
                     <span>This request is cancelled</span>
                   </div>
                 ) : (
                   <button
+                    data-tour="material-request-cancel"
                     type="button"
                     onClick={() => setShowCancelModal(true)}
                     className="px-12 py-2.5 border border-red-200 rounded-lg text-red-500 font-bold text-sm bg-white hover:bg-red-50/50 hover:border-red-300 transition-colors cursor-pointer"
@@ -695,6 +697,7 @@ export default function MaterialRequestDetailsModal({
     {/* Cancellation Confirmation Modal */}
     {showCancelModal && (
       <Modal
+        tourId="material-cancel-modal"
         open={showCancelModal}
         onClose={() => {
           if (!isCancelling) {
@@ -765,6 +768,7 @@ export default function MaterialRequestDetailsModal({
               Keep Request
             </button>
             <button
+              data-tour="material-cancel-confirm"
               type="button"
               onClick={handleCancelRequest}
               disabled={isCancelling}

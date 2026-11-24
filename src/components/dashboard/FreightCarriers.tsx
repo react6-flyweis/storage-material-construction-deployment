@@ -27,6 +27,7 @@ export default function FreightCarriers({
 
   return (
     <div
+      data-tour="dashboard-carriers"
       className={`bg-white rounded border border-gray-100 shadow-sm flex flex-col h-full ${className}`}
     >
       <CardHeader

@@ -272,7 +272,7 @@ function AddDeliveryDrawerContent({
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div data-tour="add-delivery-drawer" className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Add Delivery</h2>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -280,6 +280,7 @@ function AddDeliveryDrawerContent({
           </p>
         </div>
         <button
+          data-tour-close
           onClick={onClose}
           className="p-1.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer text-gray-400 hover:text-gray-600"
           aria-label="Close"
@@ -502,7 +503,7 @@ function AddDeliveryDrawerContent({
         </div>
 
         {/* Attachments */}
-        <div>
+        <div data-tour="add-delivery-attachments">
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-bold text-gray-700 tracking-wide">
               Attachments <span className="text-gray-400 font-normal">(Optional)</span>
@@ -638,6 +639,7 @@ function AddDeliveryDrawerContent({
           Cancel
         </button>
         <button
+          data-tour="add-delivery-save"
           type="submit"
           form="add-delivery-form"
           disabled={createDeliveryMutation.isPending || isUploading}

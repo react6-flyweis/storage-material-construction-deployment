@@ -334,6 +334,7 @@ export default function Materials() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <button
+            data-tour="materials-export"
             onClick={handleExport}
             disabled={isExporting}
             className="bg-white border border-gray-200 text-gray-700 font-medium px-4 py-2 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors text-xs sm:text-sm disabled:opacity-50 shadow-2xs"
@@ -359,6 +360,7 @@ export default function Materials() {
           </button>
 
           <button
+            data-tour="materials-request"
             onClick={() => setIsCreateOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md transition-colors flex items-center justify-center gap-1.5 text-xs sm:text-sm shadow-sm"
           >
@@ -369,7 +371,7 @@ export default function Materials() {
       </div>
 
       {/* Filters Section (5 columns as in screenshot) */}
-      <div className="bg-white p-4 sm:p-5 rounded-lg border border-gray-100 shadow-2xs">
+      <div data-tour="materials-filters" className="bg-white p-4 sm:p-5 rounded-lg border border-gray-100 shadow-2xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {/* 1. Projects Filter */}
           <div>
@@ -559,7 +561,7 @@ export default function Materials() {
       </div>
 
       {/* 4 Stats Cards using WaveStatCard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="materials-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card) => (
           <WaveStatCard
             key={card.key}
@@ -575,7 +577,7 @@ export default function Materials() {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-2xs overflow-hidden flex flex-col">
+      <div data-tour="materials-table" className="bg-white rounded-lg border border-gray-100 shadow-2xs overflow-hidden flex flex-col">
         <div className="p-5 pb-4 flex items-center justify-between">
           <h3 className="text-sm sm:text-base font-bold text-gray-900">
             Material Request ({total || 54})
@@ -691,6 +693,8 @@ export default function Materials() {
                       </td>
                       <td className="px-5 py-3.5 text-center">
                         <button
+                          data-tour="material-view"
+                          data-tour-status={statusLower}
                           onClick={() => {
                             setSelectedRequest(req);
                             setDetailsOpen(true);

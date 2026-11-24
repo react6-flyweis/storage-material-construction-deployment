@@ -317,6 +317,7 @@ export default function DrawingAttachment() {
 
           {/* Primary Action: Upload Photos & Videos (Construction Panel uploads media only) */}
           <button
+            data-tour="attachments-upload"
             onClick={() => handleOpenUploadModal()}
             className="bg-[#3F63E1] h-[40px] flex items-center gap-2 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 shadow-sm transition"
           >
@@ -327,7 +328,7 @@ export default function DrawingAttachment() {
 
         {/* Main Tabs (Outside of card) */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex bg-[#F3F4F6] p-1 rounded-lg border border-[#E5E7EB] gap-1">
+          <div data-tour="attachments-tabs" className="inline-flex bg-[#F3F4F6] p-1 rounded-lg border border-[#E5E7EB] gap-1">
             <button
               type="button"
               onClick={() => setActiveTab("all")}
@@ -350,6 +351,7 @@ export default function DrawingAttachment() {
             </button>
 
             <button
+              data-tour="attachments-tab-media"
               type="button"
               onClick={() => setActiveTab("media")}
               className={`px-4 py-2 rounded-md text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
@@ -400,7 +402,7 @@ export default function DrawingAttachment() {
           {/* Subheader & Filters: Search in left, internal tab only in photos & videos */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 lg:px-6 py-3.5 border-b border-gray-100 bg-[#FAFAFA]">
             {/* Left: Search input */}
-            <div className="flex gap-2 items-center px-3 border border-[#D1D5DB] rounded-lg h-[38px] bg-white w-full sm:w-[280px]">
+            <div data-tour="attachments-search" className="flex gap-2 items-center px-3 border border-[#D1D5DB] rounded-lg h-[38px] bg-white w-full sm:w-[280px]">
               <img src={SearchIcon} alt="" className="w-4 h-4 opacity-60" />
               <input
                 type="text"
@@ -414,7 +416,7 @@ export default function DrawingAttachment() {
             {/* Right: Internal Tab / sub-filters only when on Photos & Videos */}
             <div className="flex items-center gap-2">
               {activeTab === "media" ? (
-                <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs font-medium">
+                <div data-tour="attachments-media-filter" className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs font-medium">
                   <button
                     type="button"
                     onClick={() => setMediaTypeFilter("all")}
@@ -459,6 +461,7 @@ export default function DrawingAttachment() {
           <div className="space-y-6 px-4 lg:px-6 py-6">
             {filteredProjects.map((project, idx) => (
               <div
+                data-tour="attachments-project"
                 key={project.leadId || idx}
                 className="rounded-xl p-5 sm:p-6 border border-gray-200 bg-white shadow-xs hover:border-gray-300 transition"
               >
@@ -510,6 +513,7 @@ export default function DrawingAttachment() {
                     </div>
 
                     <button
+                      data-tour="attachments-add-media"
                       onClick={() => handleOpenUploadModal(project.leadId)}
                       className="border border-[#3F63E1] text-[#3F63E1] hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
                     >
@@ -575,6 +579,7 @@ export default function DrawingAttachment() {
 
                       return (
                         <div
+                          data-tour={isPhotoFile || isVideoFile ? "attachment-media" : undefined}
                           key={file.id}
                           className="relative group flex flex-col justify-between rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm p-4 transition"
                         >
@@ -638,6 +643,7 @@ export default function DrawingAttachment() {
                           {/* Footer Actions & Status */}
                           <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                             <span
+                              data-tour="attachment-status"
                               className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                                 statusStyle[file.status] ||
                                 "bg-gray-100 text-gray-700"
@@ -649,6 +655,7 @@ export default function DrawingAttachment() {
                             <div className="flex items-center gap-2">
                               {file.key && (
                                 <button
+                                  data-tour="attachment-download"
                                   type="button"
                                   title="Download"
                                   onClick={() =>
@@ -665,6 +672,7 @@ export default function DrawingAttachment() {
                               )}
 
                               <button
+                                data-tour="attachment-preview"
                                 type="button"
                                 title="Preview"
                                 onClick={() => {

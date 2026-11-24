@@ -45,6 +45,7 @@ export default function UserMenu({ className = "", onSignOut }: UserMenuProps) {
   return (
     <div className={`relative ${className}`} ref={menuRef}>
       <button
+        data-tour="user-menu-btn"
         type="button"
         aria-label="User profile menu"
         aria-expanded={isOpen}
@@ -74,7 +75,7 @@ export default function UserMenu({ className = "", onSignOut }: UserMenuProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div data-tour="user-menu" className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
           {user && (
             <div className="px-3 py-2 border-b border-gray-100">
               <p className="text-sm font-semibold text-gray-900 truncate">
@@ -86,6 +87,7 @@ export default function UserMenu({ className = "", onSignOut }: UserMenuProps) {
 
           <div className="px-2 pb-2 border-b border-gray-100">
             <button
+              data-tour="user-menu-profile"
               type="button"
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-left cursor-pointer"
               onClick={() => {
@@ -115,6 +117,7 @@ export default function UserMenu({ className = "", onSignOut }: UserMenuProps) {
               <span className="text-[#000000]">My profile</span>
             </button>
             <button
+              data-tour="user-menu-settings"
               type="button"
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-left cursor-pointer"
               onClick={() => {
@@ -146,6 +149,7 @@ export default function UserMenu({ className = "", onSignOut }: UserMenuProps) {
           </div>
           <div className="px-2 pt-2">
             <button
+              data-tour="user-menu-signout"
               type="button"
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors text-left font-medium cursor-pointer"
               onClick={handleSignOut}

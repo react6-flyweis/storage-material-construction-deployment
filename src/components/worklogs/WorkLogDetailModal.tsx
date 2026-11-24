@@ -68,6 +68,7 @@ export default function WorkLogDetailModal({
   return (
     <>
       <Modal
+        tourId="work-log-modal"
         open={open}
         onClose={onClose}
         containerClassName="max-h-[95vh] max-w-[550px] overflow-auto scroll-hide p-0"

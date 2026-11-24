@@ -1,107 +1,14 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
-import DashboardIcon from "../../assets/dashboardicon.svg";
-import ProjectIcon from "../../assets/projecticon.svg";
-import MaterialIcon from "../../assets/materialicon.svg";
-import TaskIcon from "../../assets/taskicon.svg";
-import CommunicationIcon from "../../assets/communicationicon.svg";
-import NotificationIcon from "../../assets/notificationicon.svg";
 import SidenavigationIcon from "../../assets/sidenavigation.svg";
 import LeftArrowIcon from "../../assets/left-arrow.svg";
 import RightArrowIcon from "../../assets/right-arrow.svg";
 
-import DeliveryTrackingIcon from "../../assets/delivery-tracking.svg";
+import { SIDEBAR_TABS } from "./sidebarTabs";
 import { useSidebar } from "../../context/SidebarContext";
 import { useAuthStore } from "../../store/authStore";
 import { useChatUnreadCountQuery } from "@/modules/team-chat/team-chat.hooks";
 import { useUnreadNotificationCountQuery } from "@/modules/notifications/notifications.hooks";
-
-type SidebarSubTab = {
-  label: string;
-  path: string;
-};
-
-type SidebarTab = {
-  key: string;
-  icon: string;
-  path: string;
-  label: string;
-  bg: string;
-  subTabs?: SidebarSubTab[];
-};
-
-const SIDEBAR_TABS: SidebarTab[] = [
-  {
-    key: "dashboard",
-    icon: DashboardIcon,
-    path: "/dashboard",
-    label: "Dashboard",
-    bg: "#FD8D5B",
-  },
-  {
-    key: "projects",
-    icon: ProjectIcon,
-    path: "/projects",
-    label: "Projects",
-    bg: "#A855F7",
-    subTabs: [
-      { label: "Projects & Calendar", path: "/projects" },
-      { label: "Drawing & Attachments", path: "/drawing-attachment" },
-    ],
-  },
-  {
-    key: "tasks",
-    icon: TaskIcon,
-    path: "/tasks",
-    label: "Tasks & Progress",
-    bg: "#FD8D5B",
-    subTabs: [
-      { label: "Task Board", path: "/tasks" },
-      { label: "Daily Work Logs", path: "/work-logs" },
-    ],
-  },
-  {
-    key: "materials",
-    icon: MaterialIcon,
-    path: "/materials",
-    label: "Material Requests",
-    bg: "#3AB449",
-  },
-  {
-    key: "delivery-tracking",
-    icon: DeliveryTrackingIcon,
-    path: "/delivery-tracking",
-    label: "Delivery Tracking",
-    bg: "#1D51A4",
-    subTabs: [
-      { label: "Delivery Tracking", path: "/delivery-tracking" },
-      // { label: "Label Printing", path: "/delivery-tracking/label-printing" },
-      {
-        label: "Dispatch Verification",
-        path: "/delivery-tracking/bundle-scan",
-      },
-      // { label: "Packing Lists", path: "/delivery-tracking/packing-lists" },
-      // {
-      //   label: "Dispatch Verification",
-      //   path: "/delivery-tracking/dispatch-verification",
-      // },
-    ],
-  },
-  {
-    key: "communication",
-    icon: CommunicationIcon,
-    path: "/communication",
-    label: "Communication",
-    bg: "#3AB449",
-  },
-  {
-    key: "notifications",
-    icon: NotificationIcon,
-    path: "/notifications",
-    label: "Notification",
-    bg: "#000000",
-  },
-];
 
 type Props = {
   open: boolean;
@@ -161,6 +68,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
       )}
 
       <aside
+        data-tour="sidebar-nav"
         className={`
           fixed top-0 left-0 z-50 h-svh 
           bg-[#E5ECFF] overflow-visible
@@ -196,6 +104,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                   onMouseLeave={() => setHoveredIndex(null)}
                 >
                   <button
+                    data-tour-nav={tab.label}
                     onClick={() => {
                       if (window.innerWidth < 1024) setOpen(false);
                       navigate(tab.path);
@@ -342,6 +251,7 @@ export default function Sidebar({ open, setOpen, isCollapsed = false }: Props) {
                         return (
                           <button
                             key={sub.path}
+                            data-tour-nav-sub={sub.path}
                             onClick={() => {
                               if (window.innerWidth < 1024) setOpen(false);
                               navigate(sub.path);

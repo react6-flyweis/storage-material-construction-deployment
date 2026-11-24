@@ -171,6 +171,7 @@ export function HeaderSearch({ className }: HeaderSearchProps) {
   return (
     <div
       ref={containerRef}
+      data-tour="header-search"
       className={cn(
         "relative w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[360px]",
         className
