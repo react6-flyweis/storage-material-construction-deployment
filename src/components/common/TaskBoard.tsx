@@ -180,12 +180,14 @@ export default function TaskBoard({ tasks: propTasks, isLoading }: TaskBoardProp
         <h2 className="text-[17px] font-semibold">Task Board</h2>
         <div className="flex flex-wrap gap-2 sm:gap-4">
           <button
+            data-tour="tasks-add-log"
             onClick={() => setDailyLogModel(true)}
             className="flex-1 sm:flex-none bg-[#3AB449] text-white px-4 sm:px-6 py-2 rounded-[8px] text-sm sm:text-[16px] font-normal"
           >
             Daily Work Log
           </button>
           <button
+            data-tour="tasks-add-task"
             onClick={() => setNewTaskModel(true)}
             className="flex-1 sm:flex-none bg-[#2563EB] text-white px-4 sm:px-6 py-2 rounded-[8px] text-sm sm:text-[16px] font-normal"
           >
@@ -233,7 +235,7 @@ export default function TaskBoard({ tasks: propTasks, isLoading }: TaskBoardProp
       </div>
 
       <div className="overflow-x-auto thin-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-w-0 md:min-w-[800px]">
+        <div data-tour="tasks-columns" className="grid grid-cols-1 md:grid-cols-3 gap-6 min-w-0 md:min-w-[800px]">
           <Column
             title={`To Do (${isLoading ? "" : filterTasksBySearch(tasks.todo).length})`}
             bg="bg-[#F9FAFB]"
@@ -289,7 +291,7 @@ function capitalizeFirstLetter(str: string) {
 
 function renderTask(task: Task) {
   return (
-    <div key={task.id} className="bg-white rounded-xl p-4 shadow-sm mb-4">
+    <div data-tour="task-card" key={task.id} className="bg-white rounded-xl p-4 shadow-sm mb-4">
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-bold text-[14px] text-[#111827]">{task.title}</h3>
         {task.status === "done" ? (
